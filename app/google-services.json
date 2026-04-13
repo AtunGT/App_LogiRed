@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "89513060976",
+    "project_id": "logired-1907",
+    "storage_bucket": "logired-1907.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:89513060976:android:828b535316e224227722b5",
+        "android_client_info": {
+          "package_name": "com.arthur.gloria.logired"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "REMOVED"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
