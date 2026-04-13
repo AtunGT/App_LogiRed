@@ -1,23 +1,22 @@
 package com.arthur.gloria.logired.features.trip.active.presentation.viewmodel
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Geocoder
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.arthur.gloria.logired.core.database.dao.RideLocationDao
+import com.arthur.gloria.logired.core.database.entity.RideLocationEntity
 import com.arthur.gloria.logired.core.local.TokenManager
+import com.arthur.gloria.logired.core.location.LocationForegroundService
 import com.arthur.gloria.logired.core.network.ApiService
 import com.arthur.gloria.logired.core.network.model.UpdateStatusRequest
 import com.arthur.gloria.logired.core.websocket.WebSocketManager
 import com.arthur.gloria.logired.features.trip.active.presentation.ui.ActiveTripUiState
 import com.arthur.gloria.logired.features.trip.active.presentation.ui.RouteStep
 import com.arthur.gloria.logired.features.trip.active.presentation.ui.TripPhase
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.tasks.CancellationTokenSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -29,18 +28,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import java.util.Locale
 import javax.inject.Inject
-import kotlin.math.*
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 @HiltViewModel
 class ActiveTripViewModel @Inject constructor(
     private val apiService: ApiService,
     private val tokenManager: TokenManager,
+    private val rideLocationDao: RideLocationDao,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -48,10 +51,10 @@ class ActiveTripViewModel @Inject constructor(
     val uiState: StateFlow<ActiveTripUiState> = _uiState.asStateFlow()
 
     private val wsManager = WebSocketManager()
-    private var locationJob: Job? = null
     private var reconnectJob: Job? = null
     private var statusPollingJob: Job? = null
-    private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    private var observeLocationJob: Job? = null
+
     private val apiKey = "REMOVED"
     private var currentTripId = 0
     private var currentIsDriver = false
@@ -78,22 +81,65 @@ class ActiveTripViewModel @Inject constructor(
         val state = _uiState.value
         if (state.tripStatus == 3 && state.isDriver) {
             loadDriverRouteToOrigin()
-            if (locationJob == null || locationJob?.isActive != true) {
-                startPublishingLocation()
+            startTrackingService(state.phase.name)
+        }
+    }
+
+    private fun startTrackingService(phase: String) {
+        viewModelScope.launch {
+            val token = tokenManager.token.first() ?: return@launch
+            LocationForegroundService.start(context, currentTripId, token, phase)
+        }
+    }
+
+    private fun observeLocationFromRoom() {
+        observeLocationJob?.cancel()
+        observeLocationJob = viewModelScope.launch {
+            rideLocationDao.observe(currentTripId).collect { entity ->
+                if (entity != null) {
+                    val newPos = LatLng(entity.lat, entity.lng)
+                    _uiState.update { s ->
+                        val bearing = if (s.driverLatLng != null &&
+                            haversineMeters(
+                                s.driverLatLng.latitude, s.driverLatLng.longitude,
+                                entity.lat, entity.lng
+                            ) > 2.0
+                        ) calculateBearing(s.driverLatLng, newPos) else s.driverBearing
+
+                        s.copy(
+                            driverLatLng = newPos,
+                            driverBearing = bearing,
+                            driverLastUpdate = entity.timestamp
+                        )
+                    }
+                    updateNavigationStep(newPos)
+                    maybeFetchRouteIfMissing(newPos)
+                }
             }
         }
     }
 
-    @SuppressLint("MissingPermission")
-    private suspend fun getFreshLocation(): android.location.Location? {
-        return try {
-            val last = fusedLocationClient.lastLocation.await()
-            if (last != null) return last
-            val cts = CancellationTokenSource()
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token).await()
-        } catch (e: Exception) {
-            Log.e("TripRoute", "getFreshLocation error: ${e.message}")
-            null
+    private suspend fun maybeFetchRouteIfMissing(driverPos: LatLng) {
+        val state = _uiState.value
+        if (state.steps.isEmpty() &&
+            (state.phase == TripPhase.GOING_TO_ORIGIN || state.phase == TripPhase.IN_TRANSIT)
+        ) {
+            val dest = when (state.phase) {
+                TripPhase.GOING_TO_ORIGIN -> state.originLatLng
+                else -> state.destinationLatLng
+            }
+            if (dest != null) {
+                val result = fetchRouteWithSteps(driverPos, dest)
+                _uiState.update { s ->
+                    s.copy(
+                        routePoints = result.first,
+                        steps = result.second,
+                        currentStepIndex = 0,
+                        distanceRemaining = result.third.first,
+                        timeRemaining = result.third.second
+                    )
+                }
+            }
         }
     }
 
@@ -112,8 +158,14 @@ class ActiveTripViewModel @Inject constructor(
             val response = apiService.getRideById(tripId)
             if (response.isSuccessful) {
                 val trip = response.body()?.ride ?: return
-                val originLatLng = resolveLatLng(trip.origin_lat, trip.origin_lng, "${trip.origin}, ${trip.origin_city}")
-                val destLatLng = resolveLatLng(trip.destination_lat, trip.destination_lng, trip.destination)
+                val originLatLng = resolveLatLng(
+                    trip.origin_lat, trip.origin_lng,
+                    "${trip.origin}, ${trip.origin_city}"
+                )
+                val destLatLng = resolveLatLng(
+                    trip.destination_lat, trip.destination_lng,
+                    trip.destination
+                )
 
                 val phase = when (trip.status) {
                     3 -> TripPhase.GOING_TO_ORIGIN
@@ -133,10 +185,26 @@ class ActiveTripViewModel @Inject constructor(
                     )
                 }
 
+                // Mostrar inmediatamente el último punto conocido (si existe)
+                val cached = rideLocationDao.getOnce(tripId)
+                if (cached != null) {
+                    _uiState.update { s ->
+                        s.copy(
+                            driverLatLng = LatLng(cached.lat, cached.lng),
+                            driverLastUpdate = cached.timestamp
+                        )
+                    }
+                }
+
                 when {
                     trip.status == 3 -> {
-                        connectWebSocket(tripId, isDriver)
-                        if (isDriver) loadDriverRouteToOrigin()
+                        observeLocationFromRoom()
+                        if (isDriver) {
+                            startTrackingService(phase.name)
+                            loadDriverRouteToOrigin()
+                        } else {
+                            connectSubscribeWebSocket(tripId)
+                        }
                     }
                     isDriver && trip.status == 1 -> {
                         if (originLatLng != null && destLatLng != null) {
@@ -174,13 +242,16 @@ class ActiveTripViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 tripStatus = trip.status,
-                                statusMessage = if (trip.status == 1) getStatusMessage(1, TripPhase.GOING_TO_ORIGIN) else it.statusMessage
+                                statusMessage = if (trip.status == 1)
+                                    getStatusMessage(1, TripPhase.GOING_TO_ORIGIN)
+                                else it.statusMessage
                             )
                         }
                         when (trip.status) {
                             3 -> {
                                 statusPollingJob?.cancel()
-                                connectWebSocket(tripId, false)
+                                observeLocationFromRoom()
+                                connectSubscribeWebSocket(tripId)
                                 _uiState.update {
                                     it.copy(
                                         phase = TripPhase.GOING_TO_ORIGIN,
@@ -203,26 +274,23 @@ class ActiveTripViewModel @Inject constructor(
                             4 -> { statusPollingJob?.cancel(); break }
                         }
                     }
-                } catch (e: Exception) { }
+                } catch (_: Exception) { }
                 delay(3000)
             }
         }
     }
 
-    private fun connectWebSocket(tripId: Int, isDriver: Boolean) {
+    // Solo usado por el CLIENTE
+    private fun connectSubscribeWebSocket(tripId: Int) {
         viewModelScope.launch {
             val token = tokenManager.token.first() ?: return@launch
-            val suffix = if (isDriver) "publish" else "subscribe"
-            val url = "wss://logiredapi.redirectme.net/ws/rides/$tripId/$suffix?token=$token"
+            val url = "wss://logiredapi.redirectme.net/ws/rides/$tripId/subscribe?token=$token"
 
-            wsManager.onOpen = {
-                _uiState.update { it.copy(wsConnected = true) }
-                if (isDriver) startPublishingLocation()
-            }
+            wsManager.onOpen = { _uiState.update { it.copy(wsConnected = true) } }
             wsManager.onMessage = { text -> parseLocationMessage(text) }
             wsManager.onFailure = {
                 _uiState.update { it.copy(wsConnected = false) }
-                scheduleReconnect(tripId, isDriver)
+                scheduleReconnect(tripId)
             }
             wsManager.onClosed = { _uiState.update { it.copy(wsConnected = false) } }
 
@@ -230,60 +298,11 @@ class ActiveTripViewModel @Inject constructor(
         }
     }
 
-    private fun scheduleReconnect(tripId: Int, isDriver: Boolean) {
+    private fun scheduleReconnect(tripId: Int) {
         reconnectJob?.cancel()
         reconnectJob = viewModelScope.launch {
             delay(3000)
-            if (_uiState.value.tripStatus == 3) connectWebSocket(tripId, isDriver)
-        }
-    }
-
-    private fun startPublishingLocation() {
-        locationJob?.cancel()
-        locationJob = viewModelScope.launch {
-            while (true) {
-                try {
-                    val loc = getFreshLocation()
-                    loc?.let {
-                        val phase = _uiState.value.phase.name
-                        val msg = """{"lat":${it.latitude},"lng":${it.longitude},"timestamp":${System.currentTimeMillis() / 1000},"phase":"$phase"}"""
-                        wsManager.send(msg)
-                        val driverPos = LatLng(it.latitude, it.longitude)
-                        val prev = _uiState.value.driverLatLng
-                        val bearing = when {
-                            it.hasBearing() && it.speed > 0.5f -> it.bearing
-                            prev != null && haversineMeters(prev.latitude, prev.longitude, driverPos.latitude, driverPos.longitude) > 2.0 ->
-                                calculateBearing(prev, driverPos)
-                            else -> _uiState.value.driverBearing
-                        }
-                        _uiState.update { s -> s.copy(driverLatLng = driverPos, driverBearing = bearing) }
-                        updateNavigationStep(driverPos)
-                        if (_uiState.value.steps.isEmpty() &&
-                            (_uiState.value.phase == TripPhase.GOING_TO_ORIGIN || _uiState.value.phase == TripPhase.IN_TRANSIT)
-                        ) {
-                            val dest = when (_uiState.value.phase) {
-                                TripPhase.GOING_TO_ORIGIN -> _uiState.value.originLatLng
-                                else -> _uiState.value.destinationLatLng
-                            }
-                            if (dest != null) {
-                                val result = fetchRouteWithSteps(driverPos, dest)
-                                _uiState.update { s ->
-                                    s.copy(
-                                        routePoints = result.first,
-                                        steps = result.second,
-                                        currentStepIndex = 0,
-                                        distanceRemaining = result.third.first,
-                                        timeRemaining = result.third.second
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("TripRoute", "publishLocation error: ${e.message}")
-                }
-                delay(3000)
-            }
+            if (_uiState.value.tripStatus == 3) connectSubscribeWebSocket(tripId)
         }
     }
 
@@ -292,27 +311,32 @@ class ActiveTripViewModel @Inject constructor(
             val json = JSONObject(text)
             val lat = json.getDouble("lat")
             val lng = json.getDouble("lng")
-            val phase = if (json.has("phase")) json.getString("phase") else null
-            val newPhase = when (phase) {
+            val ts = json.optLong("timestamp", System.currentTimeMillis() / 1000) * 1000
+
+            val phaseStr = if (json.has("phase")) json.getString("phase") else null
+            val newPhase = when (phaseStr) {
                 "GOING_TO_ORIGIN" -> TripPhase.GOING_TO_ORIGIN
                 "AT_ORIGIN" -> TripPhase.AT_ORIGIN
                 "IN_TRANSIT" -> TripPhase.IN_TRANSIT
                 "COMPLETED" -> TripPhase.COMPLETED
                 else -> null
             }
-            _uiState.update { s ->
-                val newPos = LatLng(lat, lng)
-                val bearing = if (s.driverLatLng != null &&
-                    haversineMeters(s.driverLatLng.latitude, s.driverLatLng.longitude, lat, lng) > 2.0
-                ) calculateBearing(s.driverLatLng, newPos) else s.driverBearing
-                s.copy(
-                    driverLatLng = newPos,
-                    driverBearing = bearing,
-                    phase = newPhase ?: s.phase,
-                    statusMessage = if (newPhase != null) getStatusMessage(3, newPhase) else s.statusMessage
+            if (newPhase != null) {
+                _uiState.update { s ->
+                    s.copy(
+                        phase = newPhase,
+                        statusMessage = getStatusMessage(3, newPhase)
+                    )
+                }
+            }
+
+            // La ubicación va a Room; el Flow actualizará la UI
+            viewModelScope.launch {
+                rideLocationDao.upsert(
+                    RideLocationEntity(currentTripId, lat, lng, ts, synced = true)
                 )
             }
-        } catch (e: Exception) { }
+        } catch (_: Exception) { }
     }
 
     private fun updateNavigationStep(driverPos: LatLng) {
@@ -341,8 +365,13 @@ class ActiveTripViewModel @Inject constructor(
             else -> _uiState.value.destinationLatLng
         }
         if (dest != null) {
-            val remaining = haversineMeters(driverPos.latitude, driverPos.longitude, dest.latitude, dest.longitude)
-            val distText = if (remaining >= 1000) "${"%.1f".format(remaining / 1000)} km" else "${remaining.toInt()} m"
+            val remaining = haversineMeters(
+                driverPos.latitude, driverPos.longitude,
+                dest.latitude, dest.longitude
+            )
+            val distText = if (remaining >= 1000)
+                "${"%.1f".format(remaining / 1000)} km"
+            else "${remaining.toInt()} m"
             val timeMin = (remaining / 500).toInt().coerceAtLeast(1)
             _uiState.update { it.copy(distanceRemaining = distText, timeRemaining = "$timeMin min") }
         }
@@ -366,8 +395,9 @@ class ActiveTripViewModel @Inject constructor(
     private fun loadDriverRouteToOrigin() {
         viewModelScope.launch {
             try {
-                val loc = getFreshLocation() ?: return@launch
-                val driver = LatLng(loc.latitude, loc.longitude)
+                val cached = rideLocationDao.getOnce(currentTripId)
+                val driver = if (cached != null) LatLng(cached.lat, cached.lng)
+                else return@launch
                 val origin = _uiState.value.originLatLng ?: return@launch
                 val result = fetchRouteWithSteps(driver, origin)
                 lastAnnouncedStep = -1
@@ -393,7 +423,9 @@ class ActiveTripViewModel @Inject constructor(
     fun onStartTrip() {
         viewModelScope.launch {
             try {
-                val response = apiService.updateRideStatus(_uiState.value.tripId, UpdateStatusRequest(3))
+                val response = apiService.updateRideStatus(
+                    _uiState.value.tripId, UpdateStatusRequest(3)
+                )
                 if (response.isSuccessful) {
                     _uiState.update {
                         it.copy(
@@ -402,7 +434,8 @@ class ActiveTripViewModel @Inject constructor(
                             statusMessage = getStatusMessage(3, TripPhase.GOING_TO_ORIGIN)
                         )
                     }
-                    connectWebSocket(currentTripId, currentIsDriver)
+                    observeLocationFromRoom()
+                    startTrackingService(TripPhase.GOING_TO_ORIGIN.name)
                     loadDriverRouteToOrigin()
                 } else {
                     _uiState.update { it.copy(error = "Error al iniciar viaje") }
@@ -424,6 +457,7 @@ class ActiveTripViewModel @Inject constructor(
                 timeRemaining = ""
             )
         }
+        LocationForegroundService.updatePhase(context, TripPhase.AT_ORIGIN.name)
     }
 
     fun onStartJourney() {
@@ -434,7 +468,11 @@ class ActiveTripViewModel @Inject constructor(
                     statusMessage = getStatusMessage(3, TripPhase.IN_TRANSIT)
                 )
             }
-            val origin = _uiState.value.driverLatLng ?: _uiState.value.originLatLng ?: return@launch
+            LocationForegroundService.updatePhase(context, TripPhase.IN_TRANSIT.name)
+
+            val origin = _uiState.value.driverLatLng
+                ?: _uiState.value.originLatLng
+                ?: return@launch
             val dest = _uiState.value.destinationLatLng ?: return@launch
             val result = fetchRouteWithSteps(origin, dest)
             lastAnnouncedStep = -1
@@ -456,9 +494,13 @@ class ActiveTripViewModel @Inject constructor(
     fun onArrivedAtDestination() {
         viewModelScope.launch {
             try {
-                val response = apiService.updateRideStatus(_uiState.value.tripId, UpdateStatusRequest(5))
+                val response = apiService.updateRideStatus(
+                    _uiState.value.tripId, UpdateStatusRequest(5)
+                )
                 if (response.isSuccessful) {
-                    locationJob?.cancel()
+                    LocationForegroundService.stop(context)
+                    rideLocationDao.deleteByRide(currentTripId)
+                    observeLocationJob?.cancel()
                     wsManager.disconnect()
                     tts?.stop()
                     _uiState.update {
@@ -483,7 +525,7 @@ class ActiveTripViewModel @Inject constructor(
         status == 3 && phase == TripPhase.GOING_TO_ORIGIN -> "El conductor está en camino a tu dirección"
         status == 3 && phase == TripPhase.AT_ORIGIN -> "El conductor llegó a tu dirección"
         status == 3 && phase == TripPhase.IN_TRANSIT -> "El viaje ha iniciado"
-        status == 5 -> "Viaje completado ✅"
+        status == 5 -> "Viaje completado "
         else -> "Procesando..."
     }
 
@@ -504,7 +546,8 @@ class ActiveTripViewModel @Inject constructor(
                     return@withContext Triple(emptyList<LatLng>(), emptyList<RouteStep>(), Pair("", ""))
                 }
                 val routes = json.getJSONArray("routes")
-                if (routes.length() == 0) return@withContext Triple(emptyList<LatLng>(), emptyList<RouteStep>(), Pair("", ""))
+                if (routes.length() == 0)
+                    return@withContext Triple(emptyList<LatLng>(), emptyList<RouteStep>(), Pair("", ""))
 
                 val route = routes.getJSONObject(0)
                 val leg = route.getJSONArray("legs").getJSONObject(0)
@@ -539,11 +582,21 @@ class ActiveTripViewModel @Inject constructor(
         var index = 0; var lat = 0; var lng = 0
         while (index < encoded.length) {
             var b: Int; var shift = 0; var result = 0
-            do { b = encoded[index++].code - 63; result = result or ((b and 0x1f) shl shift); shift += 5 } while (b >= 0x20)
-            val dLat = if (result and 1 != 0) (result shr 1).inv() else result shr 1; lat += dLat
+            do {
+                b = encoded[index++].code - 63
+                result = result or ((b and 0x1f) shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dLat = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+            lat += dLat
             shift = 0; result = 0
-            do { b = encoded[index++].code - 63; result = result or ((b and 0x1f) shl shift); shift += 5 } while (b >= 0x20)
-            val dLng = if (result and 1 != 0) (result shr 1).inv() else result shr 1; lng += dLng
+            do {
+                b = encoded[index++].code - 63
+                result = result or ((b and 0x1f) shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dLng = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+            lng += dLng
             poly.add(LatLng(lat / 1E5, lng / 1E5))
         }
         return poly
@@ -553,7 +606,8 @@ class ActiveTripViewModel @Inject constructor(
         val r = 6371000.0
         val dLat = Math.toRadians(lat2 - lat1)
         val dLng = Math.toRadians(lng2 - lng1)
-        val a = sin(dLat / 2).pow(2) + cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLng / 2).pow(2)
+        val a = sin(dLat / 2).pow(2) +
+                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLng / 2).pow(2)
         return r * 2 * atan2(sqrt(a), sqrt(1 - a))
     }
 
@@ -562,16 +616,17 @@ class ActiveTripViewModel @Inject constructor(
         else withContext(Dispatchers.IO) {
             try {
                 @Suppress("DEPRECATION")
-                Geocoder(context, Locale.getDefault()).getFromLocationName(address, 1)
+                Geocoder(context, Locale.getDefault())
+                    .getFromLocationName(address, 1)
                     ?.firstOrNull()?.let { LatLng(it.latitude, it.longitude) }
-            } catch (e: Exception) { null }
+            } catch (_: Exception) { null }
         }
 
     override fun onCleared() {
         super.onCleared()
-        locationJob?.cancel()
         reconnectJob?.cancel()
         statusPollingJob?.cancel()
+        observeLocationJob?.cancel()
         wsManager.disconnect()
         tts?.stop()
         tts?.shutdown()

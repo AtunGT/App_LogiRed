@@ -27,6 +27,9 @@ data class TripMapUiState(
     val originLatLng: LatLng?      = null,
     val destinationLatLng: LatLng? = null,
     val routePoints: List<LatLng>  = emptyList(),
+    val driverLatLng: LatLng?      = null,
+    val driverLastUpdate: Long?    = null,
+    val isLiveConnected: Boolean   = false,
     val error: String?             = null
 )
 

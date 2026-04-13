@@ -20,6 +20,7 @@ mapsCompose = "4.3.3"
 playServicesMaps = "18.2.0"
 firebaseBom = "32.7.0"
 tvMaterial = "1.0.1"
+lifecycleService = "2.10.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,6 +53,7 @@ play-services-maps = { group = "com.google.android.gms", name = "play-services-m
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
 androidx-tv-material = { group = "androidx.tv", name = "tv-material", version.ref = "tvMaterial" }
+androidx-lifecycle-service = { group = "androidx.lifecycle", name = "lifecycle-service", version.ref = "lifecycleService" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

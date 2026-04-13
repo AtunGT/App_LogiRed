@@ -38,5 +38,6 @@ data class ActiveTripUiState(
     val distanceRemaining: String = "",
     val timeRemaining: String = "",
     val isSpeakerOn: Boolean = true,
-    val isFollowingDriver: Boolean = true
+    val isFollowingDriver: Boolean = true,
+    val driverLastUpdate: Long? = null
 )
