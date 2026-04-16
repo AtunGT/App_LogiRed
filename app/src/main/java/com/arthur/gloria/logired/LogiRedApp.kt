@@ -13,6 +13,7 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
+import com.arthur.gloria.logired.BuildConfig
 
 @HiltAndroidApp
 class LogiRedApp : Application(), ImageLoaderFactory {
@@ -21,7 +22,7 @@ class LogiRedApp : Application(), ImageLoaderFactory {
         super.onCreate()
         NotificationHelper.createChannels(this)
         if (!Places.isInitialized()) {
-            Places.initialize(applicationContext, "REMOVED")
+            Places.initialize(applicationContext, BuildConfig.MAPS_API_KEY)
         }
     }
 

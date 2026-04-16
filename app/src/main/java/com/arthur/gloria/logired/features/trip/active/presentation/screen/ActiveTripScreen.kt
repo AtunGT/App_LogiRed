@@ -240,7 +240,8 @@ fun ActiveTripScreen(
                     properties = MapProperties(
                         isTrafficEnabled = true,
                         mapType = MapType.NORMAL
-                    )
+                    ),
+                    onMapClick = { viewModel.onUserInteractedWithMap() }
                 ) {
                     uiState.originLatLng?.let { pos ->
                         Marker(

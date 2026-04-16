@@ -36,6 +36,7 @@ import java.net.URL
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.*
+import com.arthur.gloria.logired.BuildConfig
 
 @HiltViewModel
 class ActiveTripViewModel @Inject constructor(
@@ -52,11 +53,15 @@ class ActiveTripViewModel @Inject constructor(
     private var reconnectJob: Job? = null
     private var statusPollingJob: Job? = null
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-    private val apiKey = "REMOVED"
+    private val apiKey = BuildConfig.MAPS_API_KEY
     private var currentTripId = 0
     private var currentIsDriver = false
     private var tts: TextToSpeech? = null
     private var lastAnnouncedStep = -1
+
+    fun onUserInteractedWithMap() {
+        _uiState.update { it.copy(isFollowingDriver = false) }
+    }
 
     init {
         tts = TextToSpeech(context) { status ->
@@ -204,7 +209,7 @@ class ActiveTripViewModel @Inject constructor(
                         }
                     }
                 } catch (e: Exception) { }
-                delay(3000)
+                delay(1000)
             }
         }
     }

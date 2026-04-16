@@ -19,6 +19,7 @@ import org.json.JSONObject
 import java.net.URL
 import java.util.Locale
 import javax.inject.Inject
+import com.arthur.gloria.logired.BuildConfig
 
 @HiltViewModel
 class TripMapViewModel @Inject constructor(
@@ -29,14 +30,19 @@ class TripMapViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TripMapUiState())
     val uiState: StateFlow<TripMapUiState> = _uiState.asStateFlow()
 
-    // Considera mover esta API Key a tu archivo local.properties o BuildConfig por seguridad
-    private val apiKey = "REMOVED"
+    private val apiKey = BuildConfig.MAPS_API_KEY
 
     fun loadTrip(tripId: Int) {
+        android.util.Log.d("MAPS_KEY", "Key: $apiKey")
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             getTripByIdUseCase(tripId)
                 .onSuccess { trip ->
+                    android.util.Log.d("MAPS_KEY", "origin_lat=${trip.origin_lat} origin_lng=${trip.origin_lng}")
+                    android.util.Log.d("MAPS_KEY", "dest_lat=${trip.destination_lat} dest_lng=${trip.destination_lng}")
+                    android.util.Log.d("MAPS_KEY", "origin=${trip.origin} city=${trip.origin_city}")
+                    android.util.Log.d("MAPS_KEY", "dest=${trip.destination}")
+
                     val originLatLng = if (trip.origin_lat != 0.0 && trip.origin_lng != 0.0)
                         LatLng(trip.origin_lat, trip.origin_lng)
                     else geocodeAddress("${trip.origin}, ${trip.origin_city}")
@@ -45,9 +51,13 @@ class TripMapViewModel @Inject constructor(
                         LatLng(trip.destination_lat, trip.destination_lng)
                     else geocodeAddress(trip.destination)
 
+                    android.util.Log.d("MAPS_KEY", "originLatLng=$originLatLng destLatLng=$destLatLng")
+
                     val route = if (originLatLng != null && destLatLng != null)
                         fetchRoute(originLatLng, destLatLng)
                     else emptyList()
+
+                    android.util.Log.d("MAPS_KEY", "routePoints=${route.size}")
 
                     _uiState.update {
                         it.copy(
@@ -75,6 +85,12 @@ class TripMapViewModel @Inject constructor(
                         "&key=$apiKey"
                 val response = URL(url).readText()
                 val json = JSONObject(response)
+                val status = json.optString("status")
+                android.util.Log.d("MAPS_KEY", "Route status: $status")
+                if (status != "OK") {
+                    android.util.Log.e("MAPS_KEY", "Error: ${json.optString("error_message")}")
+                    return@withContext emptyList()
+                }
                 val routes = json.getJSONArray("routes")
                 if (routes.length() == 0) return@withContext emptyList()
                 val polyline = routes.getJSONObject(0)
@@ -82,10 +98,10 @@ class TripMapViewModel @Inject constructor(
                     .getString("points")
                 decodePolyline(polyline)
             } catch (e: Exception) {
+                android.util.Log.e("MAPS_KEY", "fetchRoute error: ${e.message}")
                 emptyList()
             }
         }
-
     private fun decodePolyline(encoded: String): List<LatLng> {
         val poly = mutableListOf<LatLng>()
         var index = 0
