@@ -4,7 +4,6 @@ import android.content.Context
 import android.location.Geocoder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.arthur.gloria.logired.core.network.model.Trip
 import com.arthur.gloria.logired.features.trip.map.domain.usecase.GetTripByIdUseCase
 import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,15 +20,6 @@ import java.net.URL
 import java.util.Locale
 import javax.inject.Inject
 
-data class TripMapUiState(
-    val isLoading: Boolean         = true,
-    val trip: Trip?                = null,
-    val originLatLng: LatLng?      = null,
-    val destinationLatLng: LatLng? = null,
-    val routePoints: List<LatLng>  = emptyList(),
-    val error: String?             = null
-)
-
 @HiltViewModel
 class TripMapViewModel @Inject constructor(
     private val getTripByIdUseCase: GetTripByIdUseCase,
@@ -39,6 +29,7 @@ class TripMapViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TripMapUiState())
     val uiState: StateFlow<TripMapUiState> = _uiState.asStateFlow()
 
+    // Considera mover esta API Key a tu archivo local.properties o BuildConfig por seguridad
     private val apiKey = "REMOVED"
 
     fun loadTrip(tripId: Int) {
