@@ -16,6 +16,9 @@ if (localPropertiesFile.exists()) {
 }
 val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: ""
 
+val stripePublishableKey = localProperties.getProperty("STRIPE_PUBLISHABLE_KEY") ?: ""
+
+
 android {
     namespace = "com.arthur.gloria.logired"
     compileSdk = 35
@@ -29,6 +32,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+        buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
     }
 
     buildTypes {
@@ -97,4 +101,5 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation("com.stripe:stripe-android:20.52.0")
 }

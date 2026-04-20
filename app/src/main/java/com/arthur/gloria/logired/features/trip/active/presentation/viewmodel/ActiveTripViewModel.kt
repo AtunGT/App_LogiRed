@@ -37,6 +37,7 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.*
 import com.arthur.gloria.logired.BuildConfig
+import com.arthur.gloria.logired.core.network.model.PaymentRequest
 
 @HiltViewModel
 class ActiveTripViewModel @Inject constructor(
@@ -93,12 +94,19 @@ class ActiveTripViewModel @Inject constructor(
     private suspend fun getFreshLocation(): android.location.Location? {
         return try {
             val last = fusedLocationClient.lastLocation.await()
-            if (last != null) return last
+            if (last != null && (System.currentTimeMillis() - last.time) < 30000) {
+                return last
+            }
             val cts = CancellationTokenSource()
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token).await()
+            withContext(Dispatchers.IO) {
+                fusedLocationClient.getCurrentLocation(
+                    Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                    cts.token
+                ).await()
+            }
         } catch (e: Exception) {
             Log.e("TripRoute", "getFreshLocation error: ${e.message}")
-            null
+            try { fusedLocationClient.lastLocation.await() } catch (e2: Exception) { null }
         }
     }
 
@@ -160,6 +168,24 @@ class ActiveTripViewModel @Inject constructor(
                         startStatusPolling(tripId)
                     }
                 }
+
+                if (!isDriver) {
+                    viewModelScope.launch {
+                        try {
+                            val proposalResponse = apiService.getProposalsByRide(tripId)
+                            if (proposalResponse.isSuccessful) {
+                                val acceptedProposal = proposalResponse.body()?.proposals
+                                    ?.firstOrNull { it.idstatus == 2 }
+                                if (acceptedProposal != null) {
+                                    _uiState.update { it.copy(proposalPrice = acceptedProposal.price.toDouble()) }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("TripRoute", "loadProposal error: ${e.message}")
+                        }
+                    }
+                }
+
             } else {
                 _uiState.update { it.copy(isLoading = false, error = "Error al cargar el viaje") }
             }
@@ -199,7 +225,6 @@ class ActiveTripViewModel @Inject constructor(
                                 _uiState.update {
                                     it.copy(
                                         phase = TripPhase.COMPLETED,
-                                        tripCompleted = true,
                                         statusMessage = getStatusMessage(5, TripPhase.COMPLETED)
                                     )
                                 }
@@ -233,6 +258,13 @@ class ActiveTripViewModel @Inject constructor(
 
             wsManager.connect(url)
         }
+    }
+
+    private fun sendPhaseNow() {
+        val pos = _uiState.value.driverLatLng ?: return
+        val phase = _uiState.value.phase.name
+        val msg = """{"lat":${pos.latitude},"lng":${pos.longitude},"timestamp":${System.currentTimeMillis() / 1000},"phase":"$phase"}"""
+        wsManager.send(msg)
     }
 
     private fun scheduleReconnect(tripId: Int, isDriver: Boolean) {
@@ -429,6 +461,7 @@ class ActiveTripViewModel @Inject constructor(
                 timeRemaining = ""
             )
         }
+        sendPhaseNow()
     }
 
     fun onStartJourney() {
@@ -439,6 +472,7 @@ class ActiveTripViewModel @Inject constructor(
                     statusMessage = getStatusMessage(3, TripPhase.IN_TRANSIT)
                 )
             }
+            sendPhaseNow()
             val origin = _uiState.value.driverLatLng ?: _uiState.value.originLatLng ?: return@launch
             val dest = _uiState.value.destinationLatLng ?: return@launch
             val result = fetchRouteWithSteps(origin, dest)
@@ -470,7 +504,6 @@ class ActiveTripViewModel @Inject constructor(
                         it.copy(
                             tripStatus = 5,
                             phase = TripPhase.COMPLETED,
-                            tripCompleted = true,
                             statusMessage = getStatusMessage(5, TripPhase.COMPLETED)
                         )
                     }
@@ -581,4 +614,40 @@ class ActiveTripViewModel @Inject constructor(
         tts?.stop()
         tts?.shutdown()
     }
+
+    fun requestPayment(amount: Double) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.createPaymentIntent(
+                    PaymentRequest(
+                        ride_id = _uiState.value.tripId,
+                        amount = amount
+                    )
+                )
+                if (response.isSuccessful) {
+                    val body = response.body()!!
+                    _uiState.update {
+                        it.copy(
+                            paymentClientSecret = body.client_secret,
+                            showPaymentSheet = true,
+                            paymentAmount = amount
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(error = "Error al iniciar pago") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Error de conexión: ${e.message}") }
+            }
+        }
+    }
+
+    fun onPaymentCompleted() {
+        _uiState.update { it.copy(showPaymentSheet = false, tripCompleted = true) }
+    }
+
+    fun onPaymentCancelled() {
+        _uiState.update { it.copy(showPaymentSheet = false) }
+    }
+
 }

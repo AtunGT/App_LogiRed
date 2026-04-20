@@ -50,13 +50,14 @@ sealed class Screen(val route: String) {
         val arguments = listOf(navArgument("tripId") { type = NavType.IntType })
         fun createRoute(tripId: Int) = "trip_proposals/$tripId"
     }
-
-    object ActiveTrip : Screen("active_trip/{tripId}/{isDriver}") {
+    object ActiveTrip : Screen("active_trip/{tripId}/{isDriver}/{proposalPrice}") {
         val arguments = listOf(
             navArgument("tripId") { type = NavType.IntType },
-            navArgument("isDriver") { type = NavType.BoolType }
+            navArgument("isDriver") { type = NavType.BoolType },
+            navArgument("proposalPrice") { type = NavType.FloatType; defaultValue = 0f }
         )
-        fun createRoute(tripId: Int, isDriver: Boolean) = "active_trip/$tripId/$isDriver"
+        fun createRoute(tripId: Int, isDriver: Boolean, proposalPrice: Double = 0.0) =
+            "active_trip/$tripId/$isDriver/$proposalPrice"
     }
 
 }

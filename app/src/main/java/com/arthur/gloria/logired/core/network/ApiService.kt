@@ -5,6 +5,8 @@ import com.arthur.gloria.logired.core.network.model.CarsResponse
 import com.arthur.gloria.logired.core.network.model.DeviceTokenRequest
 import com.arthur.gloria.logired.core.network.model.LoginRequest
 import com.arthur.gloria.logired.core.network.model.LoginResponse
+import com.arthur.gloria.logired.core.network.model.PaymentIntentResponse
+import com.arthur.gloria.logired.core.network.model.PaymentRequest
 import com.arthur.gloria.logired.core.network.model.ProposalRequest
 import com.arthur.gloria.logired.core.network.model.ProposalStatusRequest
 import com.arthur.gloria.logired.core.network.model.ProposalsResponse
@@ -138,5 +140,8 @@ interface ApiService {
         @Path("id") id: Int,
         @Body request: ProposalStatusRequest
     ): Response<Unit>
+
+    @POST("payments/create-intent")
+    suspend fun createPaymentIntent(@Body request: PaymentRequest): Response<PaymentIntentResponse>
 
 }

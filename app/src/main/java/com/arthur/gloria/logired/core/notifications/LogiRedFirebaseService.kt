@@ -32,16 +32,19 @@ class LogiRedFirebaseService : FirebaseMessagingService() {
         }
 
         if (remoteMessage.data.isNotEmpty()) {
-            val title   = remoteMessage.data["title"]   ?: "LogiRed"
+            val title  = remoteMessage.data["title"]   ?: "LogiRed"
             val message = remoteMessage.data["message"] ?: ""
-            val type    = remoteMessage.data["type"]    ?: ""
+            val type   = remoteMessage.data["type"]    ?: ""
+            val rideId = remoteMessage.data["ride_id"]?.toIntOrNull() ?: 0
 
-            Log.d(TAG, "Data message type=$type  msg=$message")
+            Log.d(TAG, "Data message type=$type  msg=$message rideId=$rideId")
 
             NotificationHelper.showTripNotification(
                 context  = applicationContext,
                 title    = resolveTitle(type, title),
-                message  = message
+                message  = message,
+                rideId   = rideId,
+                type     = type
             )
         }
     }

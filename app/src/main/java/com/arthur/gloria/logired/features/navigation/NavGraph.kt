@@ -16,7 +16,10 @@ import com.arthur.gloria.logired.features.main.ClientMainScreen
 import com.arthur.gloria.logired.features.main.DriverMainScreen
 
 @Composable
-fun NavGraph(startDestination: String = Screen.RoleSelection.route) {
+fun NavGraph(
+    startDestination: String = Screen.RoleSelection.route,
+    initialRideId: Int = 0
+) {
     val navController = rememberNavController()
 
     NavHost(
@@ -102,7 +105,8 @@ fun NavGraph(startDestination: String = Screen.RoleSelection.route) {
                     navController.navigate(Screen.RoleSelection.route) {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
+                initialRideId = initialRideId
             )
         }
 
@@ -112,7 +116,8 @@ fun NavGraph(startDestination: String = Screen.RoleSelection.route) {
                     navController.navigate(Screen.RoleSelection.route) {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
+                initialRideId = initialRideId
             )
         }
     }

@@ -38,5 +38,10 @@ data class ActiveTripUiState(
     val distanceRemaining: String = "",
     val timeRemaining: String = "",
     val isSpeakerOn: Boolean = true,
-    val isFollowingDriver: Boolean = true
+    val isFollowingDriver: Boolean = true,
+    val paymentClientSecret: String? = null,
+    val showPaymentSheet: Boolean = false,
+    val paymentAmount: Double = 0.0,
+    val proposalPrice: Double = 0.0
+
 )

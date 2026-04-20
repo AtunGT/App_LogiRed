@@ -8,6 +8,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,10 +32,16 @@ import com.arthur.gloria.logired.features.trip.map.presentation.screen.TripMapSc
 import com.arthur.gloria.logired.features.vehicle.presentation.screen.CarScreen
 
 @Composable
-fun DriverMainScreen(onLogout: () -> Unit) {
+fun DriverMainScreen(onLogout: () -> Unit, initialRideId: Int = 0) {
     val innerNav = rememberNavController()
     val green = Color(0xFF1E7A5E)
     val greenLight = Color(0xFFE8F5F0)
+
+    LaunchedEffect(initialRideId) {
+        if (initialRideId > 0) {
+            innerNav.navigate(Screen.ActiveTrip.createRoute(initialRideId, true))
+        }
+    }
 
     val items = listOf(
         BottomNavItem.Disponibles,
@@ -50,10 +57,7 @@ fun DriverMainScreen(onLogout: () -> Unit) {
             val navBackStack by innerNav.currentBackStackEntryAsState()
             val currentDest = navBackStack?.destination
 
-            NavigationBar(
-                containerColor = Color.White,
-                contentColor   = green
-            ) {
+            NavigationBar(containerColor = Color.White, contentColor = green) {
                 items.forEach { item ->
                     val selected = currentDest?.hierarchy?.any { it.route == item.route } == true
                     NavigationBarItem(
@@ -147,11 +151,13 @@ fun DriverMainScreen(onLogout: () -> Unit) {
                 route     = Screen.ActiveTrip.route,
                 arguments = Screen.ActiveTrip.arguments
             ) { backStackEntry ->
-                val tripId   = backStackEntry.arguments?.getInt("tripId") ?: 0
-                val isDriver = backStackEntry.arguments?.getBoolean("isDriver") ?: false
+                val tripId        = backStackEntry.arguments?.getInt("tripId") ?: 0
+                val isDriver      = backStackEntry.arguments?.getBoolean("isDriver") ?: false
+                val proposalPrice = backStackEntry.arguments?.getFloat("proposalPrice")?.toDouble() ?: 0.0
                 ActiveTripScreen(
                     tripId          = tripId,
                     isDriver        = isDriver,
+                    proposalPrice   = proposalPrice,
                     onBack          = { innerNav.popBackStack() },
                     onTripCompleted = { innerNav.popBackStack() }
                 )

@@ -16,23 +16,13 @@ object NotificationHelper {
 
     fun createChannels(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
         manager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_TRIPS,
-                "Mudanzas",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notificaciones de tus mudanzas (nueva solicitud, aceptación, etc.)"
+            NotificationChannel(CHANNEL_TRIPS, "Mudanzas", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Notificaciones de tus mudanzas"
             }
         )
-
         manager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_GENERAL,
-                "General",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
+            NotificationChannel(CHANNEL_GENERAL, "General", NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = "Notificaciones generales de LogiRed"
             }
         )
@@ -42,16 +32,22 @@ object NotificationHelper {
         context: Context,
         notificationId: Int = System.currentTimeMillis().toInt(),
         title: String,
-        message: String
+        message: String,
+        rideId: Int = 0,
+        type: String = ""
     ) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("ride_id", rideId)
+            putExtra("notification_type", type)
+        }
+
         val pendingIntent = PendingIntent.getActivity(
             context,
-            0,
-            Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            },
+            rideId,
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 

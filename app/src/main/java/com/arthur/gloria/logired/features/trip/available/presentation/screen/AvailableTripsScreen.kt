@@ -48,10 +48,6 @@ fun AvailableTripsScreen(
                         .padding(horizontal = 16.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Volver", tint = green)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text("Viajes Disponibles", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
                 }
 
@@ -100,16 +96,25 @@ fun AvailableTripsScreen(
                     }
                 }
                 uiState.trips.isEmpty() -> {
-                    Column(
-                        Modifier.fillMaxSize().padding(24.dp),
+                    LazyColumn(
+                        Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(Icons.Filled.LocalShipping, null, tint = Color(0xFF8A9A94), modifier = Modifier.size(80.dp))
-                        Spacer(Modifier.height(16.dp))
-                        Text("No hay viajes disponibles", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1A1A1A))
-                        Spacer(Modifier.height(8.dp))
-                        Text("Desliza hacia abajo para actualizar", fontSize = 14.sp, color = Color(0xFF8A9A94))
+                        item {
+                            Column(
+                                Modifier.fillParentMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(Icons.Filled.LocalShipping, null, tint = Color(0xFF8A9A94), modifier = Modifier.size(80.dp))
+                                Spacer(Modifier.height(16.dp))
+                                Text("No hay viajes disponibles", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1A1A1A))
+                                Spacer(Modifier.height(8.dp))
+                                Text("Desliza hacia abajo para actualizar", fontSize = 14.sp, color = Color(0xFF8A9A94))
+                            }
+                        }
                     }
                 }
                 else -> {

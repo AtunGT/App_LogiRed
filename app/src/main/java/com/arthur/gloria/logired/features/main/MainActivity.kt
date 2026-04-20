@@ -10,6 +10,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
@@ -35,11 +36,25 @@ class MainActivity : ComponentActivity() {
                 val mainViewModel: MainViewModel = hiltViewModel()
                 val startDestination by mainViewModel.startDestination.collectAsState()
 
+                var rideId by remember { mutableStateOf(intent?.getIntExtra("ride_id", 0) ?: 0) }
+
+                LaunchedEffect(intent) {
+                    rideId = intent?.getIntExtra("ride_id", 0) ?: 0
+                }
+
                 startDestination?.let { dest ->
-                    NavGraph(startDestination = dest)
+                    NavGraph(
+                        startDestination = dest,
+                        initialRideId    = rideId
+                    )
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 
     private fun requestNotificationPermissionIfNeeded() {
@@ -48,7 +63,6 @@ class MainActivity : ComponentActivity() {
                 this,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
-
             if (!granted) {
                 requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
@@ -71,9 +85,7 @@ class MainActivity : ComponentActivity() {
                     data = Uri.parse("package:$packageName")
                 }
                 startActivity(intent)
-            } catch (e2: Exception) {
-
-            }
+            } catch (e2: Exception) { }
         }
     }
 }

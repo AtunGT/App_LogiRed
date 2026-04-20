@@ -14,6 +14,7 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 import com.arthur.gloria.logired.BuildConfig
+import com.stripe.android.PaymentConfiguration
 
 @HiltAndroidApp
 class LogiRedApp : Application(), ImageLoaderFactory {
@@ -24,6 +25,9 @@ class LogiRedApp : Application(), ImageLoaderFactory {
         if (!Places.isInitialized()) {
             Places.initialize(applicationContext, BuildConfig.MAPS_API_KEY)
         }
+
+        PaymentConfiguration.init(applicationContext, BuildConfig.STRIPE_PUBLISHABLE_KEY)
+
     }
 
     override fun newImageLoader(): ImageLoader {
