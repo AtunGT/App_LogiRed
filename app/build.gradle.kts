@@ -67,6 +67,7 @@ dependencies {
     implementation("com.google.accompanist:accompanist-swiperefresh:0.36.0")
 
     implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.common)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 

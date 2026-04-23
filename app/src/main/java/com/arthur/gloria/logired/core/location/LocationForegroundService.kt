@@ -1,5 +1,6 @@
 package com.arthur.gloria.logired.core.location
 
+import com.arthur.gloria.logired.core.work.WorkManagerScheduler
 import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
@@ -107,10 +108,12 @@ class LocationForegroundService : LifecycleService() {
                     return START_NOT_STICKY
                 }
                 startForeground(NOTIFICATION_ID, buildNotification())
+                WorkManagerScheduler.scheduleWatchdog(this, rideId, token, currentPhase)
                 connectWebSocket()
                 startLocationUpdates()
             }
             ACTION_UPDATE_PHASE -> {
+                WorkManagerScheduler.scheduleWatchdog(this, rideId, token, currentPhase)
                 currentPhase = intent.getStringExtra(EXTRA_PHASE) ?: currentPhase
                 Log.d(TAG, "Fase actualizada a: $currentPhase")
             }
@@ -192,6 +195,7 @@ class LocationForegroundService : LifecycleService() {
     }
 
     private fun stopTracking() {
+        WorkManagerScheduler.cancelAll(this)
         fusedClient.removeLocationUpdates(locationCallback)
         wsManager.disconnect()
         stopForeground(STOP_FOREGROUND_REMOVE)
