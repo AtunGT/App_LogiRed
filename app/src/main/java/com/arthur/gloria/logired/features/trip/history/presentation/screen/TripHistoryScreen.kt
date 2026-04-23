@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Scale
@@ -19,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.arthur.gloria.logired.core.network.model.Trip
 import com.arthur.gloria.logired.features.trip.history.presentation.viewmodel.TripHistoryViewModel
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.SwipeRefreshIndicator
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
 @Composable
 fun TripHistoryScreen(
@@ -27,11 +31,13 @@ fun TripHistoryScreen(
     viewModel: TripHistoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val green = Color(0xFF1E7A5E)
+    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = uiState.isLoading)
 
     LaunchedEffect(userType) { viewModel.loadHistory(userType) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Surface(color = Color(0xFF1E7A5E), shadowElevation = 2.dp) {
+        Surface(color = green, shadowElevation = 2.dp) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -54,30 +60,48 @@ fun TripHistoryScreen(
             }
         }
 
-        when {
-            uiState.isLoading -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+        SwipeRefresh(
+            state     = swipeRefreshState,
+            onRefresh = { viewModel.loadHistory(userType) },
+            indicator = { state, trigger ->
+                SwipeRefreshIndicator(state = state, refreshTriggerDistance = trigger, contentColor = green)
+            },
+            modifier  = Modifier.fillMaxSize()
+        ) {
+            when {
+                uiState.error != null -> {
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        item {
+                            Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(uiState.error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    }
                 }
-            }
-            uiState.error != null -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(uiState.error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge)
+                uiState.filteredTrips.isEmpty() -> {
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        item {
+                            Column(
+                                Modifier.fillParentMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(Icons.Filled.History, null, tint = Color(0xFF8A9A94), modifier = Modifier.size(80.dp))
+                                Spacer(Modifier.height(16.dp))
+                                Text("No tienes mudanzas completadas", style = MaterialTheme.typography.bodyLarge, color = Color(0xFF8A9A94))
+                            }
+                        }
+                    }
                 }
-            }
-            uiState.filteredTrips.isEmpty() -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No tienes mudanzas completadas", style = MaterialTheme.typography.bodyLarge)
-                }
-            }
-            else -> {
-                LazyColumn(
-                    contentPadding      = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier            = Modifier.fillMaxSize()
-                ) {
-                    items(uiState.filteredTrips, key = { it.id }) { trip ->
-                        TripHistoryCard(trip = trip, onViewMap = { onViewMap(trip.id) })
+                else -> {
+                    LazyColumn(
+                        contentPadding      = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier            = Modifier.fillMaxSize()
+                    ) {
+                        items(uiState.filteredTrips, key = { it.id }) { trip ->
+                            TripHistoryCard(trip = trip, onViewMap = { onViewMap(trip.id) })
+                        }
                     }
                 }
             }

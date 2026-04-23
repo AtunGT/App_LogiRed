@@ -31,6 +31,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.SwipeRefreshIndicator
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -49,15 +52,25 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel<DashboardViewModel>()
 ) {
     val uiState: DashboardUiState by viewModel.uiState.collectAsState()
+    val green = Color(0xFF1E7A5E)
+    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = uiState.isLoading)
 
     LaunchedEffect(userType) { viewModel.loadStats(userType) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+    SwipeRefresh(
+        state     = swipeRefreshState,
+        onRefresh = { viewModel.loadStats(userType) },
+        indicator = { state, trigger ->
+            SwipeRefreshIndicator(state = state, refreshTriggerDistance = trigger, contentColor = green)
+        },
+        modifier  = Modifier.fillMaxSize()
     ) {
-        Surface(color = Color(0xFF1E7A5E), shadowElevation = 2.dp) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+        Surface(color = green, shadowElevation = 2.dp) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -78,13 +91,6 @@ fun DashboardScreen(
                 }
                 Box(modifier = Modifier.size(48.dp))
             }
-        }
-
-        if (uiState.isLoading) {
-            Box(Modifier.fillMaxWidth().height(200.dp), Alignment.Center) {
-                CircularProgressIndicator()
-            }
-            return@Column
         }
 
         if (uiState.error != null) {
@@ -133,7 +139,8 @@ fun DashboardScreen(
         }
 
         Spacer(Modifier.height(24.dp))
-    }
+        } // end Column
+    } // end SwipeRefresh
 }
 
 @Composable

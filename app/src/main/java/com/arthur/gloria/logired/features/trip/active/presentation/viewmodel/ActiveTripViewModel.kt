@@ -7,7 +7,11 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.arthur.gloria.logired.core.database.dao.RideLocationDao
+import com.arthur.gloria.logired.core.haptic.HapticEvent
+import com.arthur.gloria.logired.core.haptic.HapticManager
 import com.arthur.gloria.logired.core.local.TokenManager
+import com.arthur.gloria.logired.core.location.LocationForegroundService
 import com.arthur.gloria.logired.core.network.ApiService
 import com.arthur.gloria.logired.core.network.model.UpdateStatusRequest
 import com.arthur.gloria.logired.core.websocket.WebSocketManager
@@ -36,13 +40,13 @@ import java.net.URL
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.*
-import com.arthur.gloria.logired.BuildConfig
-import com.arthur.gloria.logired.core.network.model.PaymentRequest
 
 @HiltViewModel
 class ActiveTripViewModel @Inject constructor(
     private val apiService: ApiService,
     private val tokenManager: TokenManager,
+    private val rideLocationDao: RideLocationDao,
+    private val hapticManager: HapticManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -50,19 +54,15 @@ class ActiveTripViewModel @Inject constructor(
     val uiState: StateFlow<ActiveTripUiState> = _uiState.asStateFlow()
 
     private val wsManager = WebSocketManager()
-    private var locationJob: Job? = null
+    private var locationObserverJob: Job? = null
     private var reconnectJob: Job? = null
     private var statusPollingJob: Job? = null
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-    private val apiKey = BuildConfig.MAPS_API_KEY
+    private val apiKey = "REMOVED"
     private var currentTripId = 0
     private var currentIsDriver = false
     private var tts: TextToSpeech? = null
     private var lastAnnouncedStep = -1
-
-    fun onUserInteractedWithMap() {
-        _uiState.update { it.copy(isFollowingDriver = false) }
-    }
 
     init {
         tts = TextToSpeech(context) { status ->
@@ -77,16 +77,49 @@ class ActiveTripViewModel @Inject constructor(
         currentTripId = tripId
         currentIsDriver = isDriver
         _uiState.update { it.copy(tripId = tripId, isDriver = isDriver, isLoading = true) }
+
+        // El conductor observa Room DB para reflejar su posición en el mapa.
+        // El ForegroundService escribe en DB; el ViewModel solo lee.
+        if (isDriver) observeDriverLocationFromDb(tripId)
+
         viewModelScope.launch { loadTrip(tripId, isDriver) }
+    }
+
+    /**
+     * Propaga el precio de la propuesta al estado de UI para mostrar el botón de pago
+     * cuando el viaje complete. Debe llamarse desde la Screen con el parámetro recibido
+     * en la navegación.
+     */
+    fun setProposalPrice(price: Double) {
+        if (price > 0.0 && _uiState.value.proposalPrice != price) {
+            _uiState.update { it.copy(proposalPrice = price) }
+        }
+    }
+
+    /**
+     * Observa la última posición guardada en Room DB para el viaje dado.
+     * Actualiza driverLatLng en el estado cuando el ForegroundService registra una nueva posición.
+     */
+    private fun observeDriverLocationFromDb(tripId: Int) {
+        locationObserverJob?.cancel()
+        locationObserverJob = viewModelScope.launch {
+            rideLocationDao.observe(tripId).collect { entity ->
+                entity ?: return@collect
+                val newPos = LatLng(entity.lat, entity.lng)
+                _uiState.update { s ->
+                    val bearing = if (s.driverLatLng != null &&
+                        haversineMeters(s.driverLatLng.latitude, s.driverLatLng.longitude, entity.lat, entity.lng) > 2.0
+                    ) calculateBearing(s.driverLatLng, newPos) else s.driverBearing
+                    s.copy(driverLatLng = newPos, driverBearing = bearing)
+                }
+            }
+        }
     }
 
     fun onLocationPermissionGranted() {
         val state = _uiState.value
         if (state.tripStatus == 3 && state.isDriver) {
             loadDriverRouteToOrigin()
-            if (locationJob == null || locationJob?.isActive != true) {
-                startPublishingLocation()
-            }
         }
     }
 
@@ -94,19 +127,12 @@ class ActiveTripViewModel @Inject constructor(
     private suspend fun getFreshLocation(): android.location.Location? {
         return try {
             val last = fusedLocationClient.lastLocation.await()
-            if (last != null && (System.currentTimeMillis() - last.time) < 30000) {
-                return last
-            }
+            if (last != null) return last
             val cts = CancellationTokenSource()
-            withContext(Dispatchers.IO) {
-                fusedLocationClient.getCurrentLocation(
-                    Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                    cts.token
-                ).await()
-            }
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token).await()
         } catch (e: Exception) {
             Log.e("TripRoute", "getFreshLocation error: ${e.message}")
-            try { fusedLocationClient.lastLocation.await() } catch (e2: Exception) { null }
+            null
         }
     }
 
@@ -168,24 +194,6 @@ class ActiveTripViewModel @Inject constructor(
                         startStatusPolling(tripId)
                     }
                 }
-
-                if (!isDriver) {
-                    viewModelScope.launch {
-                        try {
-                            val proposalResponse = apiService.getProposalsByRide(tripId)
-                            if (proposalResponse.isSuccessful) {
-                                val acceptedProposal = proposalResponse.body()?.proposals
-                                    ?.firstOrNull { it.idstatus == 2 }
-                                if (acceptedProposal != null) {
-                                    _uiState.update { it.copy(proposalPrice = acceptedProposal.price.toDouble()) }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Log.e("TripRoute", "loadProposal error: ${e.message}")
-                        }
-                    }
-                }
-
             } else {
                 _uiState.update { it.copy(isLoading = false, error = "Error al cargar el viaje") }
             }
@@ -211,6 +219,8 @@ class ActiveTripViewModel @Inject constructor(
                         when (trip.status) {
                             3 -> {
                                 statusPollingJob?.cancel()
+                                // Viaje iniciado: vibrar para el cliente
+                                hapticManager.vibrate(HapticEvent.TRIP_STARTED)
                                 connectWebSocket(tripId, false)
                                 _uiState.update {
                                     it.copy(
@@ -221,11 +231,15 @@ class ActiveTripViewModel @Inject constructor(
                                 break
                             }
                             5 -> {
+                                // El viaje terminó mientras el cliente esperaba (caso raro)
                                 statusPollingJob?.cancel()
+                                hapticManager.vibrate(HapticEvent.TRIP_COMPLETED)
                                 _uiState.update {
                                     it.copy(
+                                        tripStatus = 5,
                                         phase = TripPhase.COMPLETED,
                                         statusMessage = getStatusMessage(5, TripPhase.COMPLETED)
+                                        // NO se pone tripCompleted=true aquí: el cliente debe pagar primero
                                     )
                                 }
                                 break
@@ -234,37 +248,87 @@ class ActiveTripViewModel @Inject constructor(
                         }
                     }
                 } catch (e: Exception) { }
-                delay(1000)
+                delay(3000)
             }
         }
     }
 
+    /**
+     * Polling de rescate: se activa cuando el WS del cliente se cierra durante un viaje activo
+     * (status=3). Consulta el API hasta detectar que el viaje terminó (status=5) o recupera
+     * la conexión WS si el viaje sigue activo.
+     */
+    private fun startStatusPollingForCompletion() {
+        statusPollingJob?.cancel()
+        statusPollingJob = viewModelScope.launch {
+            repeat(20) { // hasta ~60 segundos
+                if (_uiState.value.tripStatus != 3) return@launch
+                try {
+                    val response = apiService.getRideById(currentTripId)
+                    if (response.isSuccessful) {
+                        val trip = response.body()?.ride
+                        when (trip?.status) {
+                            5 -> {
+                                // Viaje terminado: notificar al cliente con vibración y mostrar UI de pago
+                                hapticManager.vibrate(HapticEvent.TRIP_COMPLETED)
+                                _uiState.update {
+                                    it.copy(
+                                        tripStatus = 5,
+                                        phase = TripPhase.COMPLETED,
+                                        statusMessage = getStatusMessage(5, TripPhase.COMPLETED)
+                                        // NO tripCompleted=true: el cliente paga primero
+                                    )
+                                }
+                                return@launch
+                            }
+                            3 -> {
+                                // Viaje sigue activo: reconectar WS
+                                connectWebSocket(currentTripId, false)
+                                return@launch
+                            }
+                        }
+                    }
+                } catch (e: Exception) { }
+                delay(3000)
+            }
+        }
+    }
+
+    /**
+     * Ambos roles se suscriben al WebSocket del room.
+     * El ForegroundService es el único que publica; el ViewModel solo escucha.
+     * Esto elimina la publicación duplicada.
+     */
     private fun connectWebSocket(tripId: Int, isDriver: Boolean) {
         viewModelScope.launch {
             val token = tokenManager.token.first() ?: return@launch
-            val suffix = if (isDriver) "publish" else "subscribe"
-            val url = "wss://logiredapi.redirectme.net/ws/rides/$tripId/$suffix?token=$token"
+            val url = "wss://logiredapi.redirectme.net/ws/rides/$tripId/subscribe?token=$token"
 
             wsManager.onOpen = {
                 _uiState.update { it.copy(wsConnected = true) }
-                if (isDriver) startPublishingLocation()
             }
             wsManager.onMessage = { text -> parseLocationMessage(text) }
-            wsManager.onFailure = {
+            wsManager.onFailure = { error ->
+                Log.w("ActiveTripVM", "WS fallo: $error")
                 _uiState.update { it.copy(wsConnected = false) }
-                scheduleReconnect(tripId, isDriver)
+                hapticManager.vibrate(HapticEvent.WARNING)
+                if (!isDriver && _uiState.value.tripStatus == 3) {
+                    // Cliente en viaje activo: poll para detectar si el conductor terminó
+                    startStatusPollingForCompletion()
+                } else {
+                    scheduleReconnect(tripId, isDriver)
+                }
             }
-            wsManager.onClosed = { _uiState.update { it.copy(wsConnected = false) } }
+            wsManager.onClosed = {
+                _uiState.update { it.copy(wsConnected = false) }
+                if (!isDriver && _uiState.value.tripStatus == 3) {
+                    // WS cerrado para cliente durante viaje: verificar si terminó
+                    startStatusPollingForCompletion()
+                }
+            }
 
             wsManager.connect(url)
         }
-    }
-
-    private fun sendPhaseNow() {
-        val pos = _uiState.value.driverLatLng ?: return
-        val phase = _uiState.value.phase.name
-        val msg = """{"lat":${pos.latitude},"lng":${pos.longitude},"timestamp":${System.currentTimeMillis() / 1000},"phase":"$phase"}"""
-        wsManager.send(msg)
     }
 
     private fun scheduleReconnect(tripId: Int, isDriver: Boolean) {
@@ -275,77 +339,40 @@ class ActiveTripViewModel @Inject constructor(
         }
     }
 
-    private fun startPublishingLocation() {
-        locationJob?.cancel()
-        locationJob = viewModelScope.launch {
-            while (true) {
-                try {
-                    val loc = getFreshLocation()
-                    loc?.let {
-                        val phase = _uiState.value.phase.name
-                        val msg = """{"lat":${it.latitude},"lng":${it.longitude},"timestamp":${System.currentTimeMillis() / 1000},"phase":"$phase"}"""
-                        wsManager.send(msg)
-                        val driverPos = LatLng(it.latitude, it.longitude)
-                        val prev = _uiState.value.driverLatLng
-                        val bearing = when {
-                            it.hasBearing() && it.speed > 0.5f -> it.bearing
-                            prev != null && haversineMeters(prev.latitude, prev.longitude, driverPos.latitude, driverPos.longitude) > 2.0 ->
-                                calculateBearing(prev, driverPos)
-                            else -> _uiState.value.driverBearing
-                        }
-                        _uiState.update { s -> s.copy(driverLatLng = driverPos, driverBearing = bearing) }
-                        updateNavigationStep(driverPos)
-                        if (_uiState.value.steps.isEmpty() &&
-                            (_uiState.value.phase == TripPhase.GOING_TO_ORIGIN || _uiState.value.phase == TripPhase.IN_TRANSIT)
-                        ) {
-                            val dest = when (_uiState.value.phase) {
-                                TripPhase.GOING_TO_ORIGIN -> _uiState.value.originLatLng
-                                else -> _uiState.value.destinationLatLng
-                            }
-                            if (dest != null) {
-                                val result = fetchRouteWithSteps(driverPos, dest)
-                                _uiState.update { s ->
-                                    s.copy(
-                                        routePoints = result.first,
-                                        steps = result.second,
-                                        currentStepIndex = 0,
-                                        distanceRemaining = result.third.first,
-                                        timeRemaining = result.third.second
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("TripRoute", "publishLocation error: ${e.message}")
-                }
-                delay(3000)
-            }
-        }
-    }
-
     private fun parseLocationMessage(text: String) {
         try {
             val json = JSONObject(text)
             val lat = json.getDouble("lat")
             val lng = json.getDouble("lng")
-            val phase = if (json.has("phase")) json.getString("phase") else null
-            val newPhase = when (phase) {
+            val phaseStr = if (json.has("phase")) json.getString("phase") else null
+            val newPhase = when (phaseStr) {
                 "GOING_TO_ORIGIN" -> TripPhase.GOING_TO_ORIGIN
-                "AT_ORIGIN" -> TripPhase.AT_ORIGIN
-                "IN_TRANSIT" -> TripPhase.IN_TRANSIT
-                "COMPLETED" -> TripPhase.COMPLETED
-                else -> null
+                "AT_ORIGIN"       -> TripPhase.AT_ORIGIN
+                "IN_TRANSIT"      -> TripPhase.IN_TRANSIT
+                "COMPLETED"       -> TripPhase.COMPLETED
+                else              -> null
             }
+
+            // Vibrar en el cliente cuando la fase del conductor cambia
+            if (!currentIsDriver && newPhase != null && newPhase != _uiState.value.phase) {
+                val event = when (newPhase) {
+                    TripPhase.GOING_TO_ORIGIN -> HapticEvent.TRIP_STARTED
+                    TripPhase.AT_ORIGIN       -> HapticEvent.ARRIVED_AT_ORIGIN
+                    TripPhase.IN_TRANSIT      -> HapticEvent.JOURNEY_STARTED
+                    TripPhase.COMPLETED       -> HapticEvent.TRIP_COMPLETED
+                }
+                hapticManager.vibrate(event)
+            }
+
             _uiState.update { s ->
                 val newPos = LatLng(lat, lng)
                 val bearing = if (s.driverLatLng != null &&
                     haversineMeters(s.driverLatLng.latitude, s.driverLatLng.longitude, lat, lng) > 2.0
                 ) calculateBearing(s.driverLatLng, newPos) else s.driverBearing
                 s.copy(
-                    driverLatLng = newPos,
+                    driverLatLng  = newPos,
                     driverBearing = bearing,
-                    phase = newPhase ?: s.phase,
+                    phase         = newPhase ?: s.phase,
                     statusMessage = if (newPhase != null) getStatusMessage(3, newPhase) else s.statusMessage
                 )
             }
@@ -432,6 +459,11 @@ class ActiveTripViewModel @Inject constructor(
             try {
                 val response = apiService.updateRideStatus(_uiState.value.tripId, UpdateStatusRequest(3))
                 if (response.isSuccessful) {
+                    val token = tokenManager.token.first() ?: return@launch
+                    // Iniciar el ForegroundService que publicará la ubicación
+                    LocationForegroundService.start(context, currentTripId, token, "GOING_TO_ORIGIN")
+                    // Vibrar: conductor inicia el viaje
+                    hapticManager.vibrate(HapticEvent.TRIP_STARTED)
                     _uiState.update {
                         it.copy(
                             tripStatus = 3,
@@ -451,6 +483,10 @@ class ActiveTripViewModel @Inject constructor(
     }
 
     fun onArrivedAtOrigin() {
+        // Vibrar: conductor llegó al origen
+        hapticManager.vibrate(HapticEvent.ARRIVED_AT_ORIGIN)
+        // Notificar al ForegroundService para que envíe la phase correcta
+        LocationForegroundService.updatePhase(context, "AT_ORIGIN")
         _uiState.update {
             it.copy(
                 phase = TripPhase.AT_ORIGIN,
@@ -461,10 +497,13 @@ class ActiveTripViewModel @Inject constructor(
                 timeRemaining = ""
             )
         }
-        sendPhaseNow()
     }
 
     fun onStartJourney() {
+        // Vibrar: conductor inicia el trayecto
+        hapticManager.vibrate(HapticEvent.JOURNEY_STARTED)
+        // Notificar al ForegroundService
+        LocationForegroundService.updatePhase(context, "IN_TRANSIT")
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -472,7 +511,6 @@ class ActiveTripViewModel @Inject constructor(
                     statusMessage = getStatusMessage(3, TripPhase.IN_TRANSIT)
                 )
             }
-            sendPhaseNow()
             val origin = _uiState.value.driverLatLng ?: _uiState.value.originLatLng ?: return@launch
             val dest = _uiState.value.destinationLatLng ?: return@launch
             val result = fetchRouteWithSteps(origin, dest)
@@ -497,13 +535,19 @@ class ActiveTripViewModel @Inject constructor(
             try {
                 val response = apiService.updateRideStatus(_uiState.value.tripId, UpdateStatusRequest(5))
                 if (response.isSuccessful) {
-                    locationJob?.cancel()
+                    // Vibrar: conductor llegó al destino
+                    hapticManager.vibrate(HapticEvent.TRIP_COMPLETED)
+                    // Detener el ForegroundService y limpiar DB
+                    LocationForegroundService.stop(context)
+                    viewModelScope.launch { rideLocationDao.deleteByRide(currentTripId) }
+                    locationObserverJob?.cancel()
                     wsManager.disconnect()
                     tts?.stop()
                     _uiState.update {
                         it.copy(
                             tripStatus = 5,
                             phase = TripPhase.COMPLETED,
+                            tripCompleted = true, // Conductor navega inmediatamente
                             statusMessage = getStatusMessage(5, TripPhase.COMPLETED)
                         )
                     }
@@ -516,11 +560,37 @@ class ActiveTripViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Llamado por el cliente cuando completa el pago exitosamente.
+     * Aquí sí se navega fuera de la pantalla.
+     */
+    fun onPaymentCompleted() {
+        _uiState.update { it.copy(showPaymentSheet = false, tripCompleted = true) }
+    }
+
+    fun onPaymentCancelled() {
+        _uiState.update { it.copy(showPaymentSheet = false) }
+    }
+
+    /**
+     * Llamado por el cliente cuando no hay precio o quiere cerrar la pantalla
+     * de viaje completado sin pagar (precio = 0).
+     */
+    fun dismissCompletedTrip() {
+        _uiState.update { it.copy(tripCompleted = true) }
+    }
+
+    fun requestPayment(amount: Double) {
+        // TODO: implementar integración de pago con Stripe
+        // Por ahora, marcar como completado para navegar
+        _uiState.update { it.copy(showPaymentSheet = true) }
+    }
+
     private fun getStatusMessage(status: Int, phase: TripPhase): String = when {
         status == 1 -> "El conductor se está preparando"
         status == 3 && phase == TripPhase.GOING_TO_ORIGIN -> "El conductor está en camino a tu dirección"
-        status == 3 && phase == TripPhase.AT_ORIGIN -> "El conductor llegó a tu dirección"
-        status == 3 && phase == TripPhase.IN_TRANSIT -> "El viaje ha iniciado"
+        status == 3 && phase == TripPhase.AT_ORIGIN       -> "El conductor llegó a tu dirección"
+        status == 3 && phase == TripPhase.IN_TRANSIT      -> "El viaje ha iniciado"
         status == 5 -> "Viaje completado ✅"
         else -> "Procesando..."
     }
@@ -607,47 +677,11 @@ class ActiveTripViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        locationJob?.cancel()
+        locationObserverJob?.cancel()
         reconnectJob?.cancel()
         statusPollingJob?.cancel()
         wsManager.disconnect()
         tts?.stop()
         tts?.shutdown()
     }
-
-    fun requestPayment(amount: Double) {
-        viewModelScope.launch {
-            try {
-                val response = apiService.createPaymentIntent(
-                    PaymentRequest(
-                        ride_id = _uiState.value.tripId,
-                        amount = amount
-                    )
-                )
-                if (response.isSuccessful) {
-                    val body = response.body()!!
-                    _uiState.update {
-                        it.copy(
-                            paymentClientSecret = body.client_secret,
-                            showPaymentSheet = true,
-                            paymentAmount = amount
-                        )
-                    }
-                } else {
-                    _uiState.update { it.copy(error = "Error al iniciar pago") }
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = "Error de conexión: ${e.message}") }
-            }
-        }
-    }
-
-    fun onPaymentCompleted() {
-        _uiState.update { it.copy(showPaymentSheet = false, tripCompleted = true) }
-    }
-
-    fun onPaymentCancelled() {
-        _uiState.update { it.copy(showPaymentSheet = false) }
-    }
-
 }

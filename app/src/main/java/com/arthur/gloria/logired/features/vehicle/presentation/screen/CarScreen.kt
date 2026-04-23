@@ -35,6 +35,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.arthur.gloria.logired.core.network.model.Car
 import com.arthur.gloria.logired.features.vehicle.presentation.viewmodel.CarViewModel
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.SwipeRefreshIndicator
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import java.io.File
 
 @Composable
@@ -42,6 +45,7 @@ fun CarScreen(viewModel: CarViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val green = Color(0xFF1E7A5E)
     val bgColor = Color(0xFFF0F7F4)
+    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = uiState.isLoading)
 
     LaunchedEffect(uiState.successMessage) {
         if (uiState.successMessage != null) {
@@ -104,59 +108,71 @@ fun CarScreen(viewModel: CarViewModel = hiltViewModel()) {
                 }
             }
 
-            when {
-                uiState.isLoading -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = green)
-                    }
-                }
-                uiState.error != null -> {
-                    Column(
-                        Modifier.fillMaxSize().padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(Icons.Filled.ErrorOutline, null, tint = Color.Red, modifier = Modifier.size(64.dp))
-                        Spacer(Modifier.height(16.dp))
-                        Text(uiState.error!!, color = Color.Red, fontSize = 16.sp)
-                        Spacer(Modifier.height(16.dp))
-                        Button(onClick = viewModel::loadCars, colors = ButtonDefaults.buttonColors(containerColor = green)) {
-                            Text("Reintentar")
+            SwipeRefresh(
+                state     = swipeRefreshState,
+                onRefresh = { viewModel.loadCars() },
+                indicator = { state, trigger ->
+                    SwipeRefreshIndicator(state = state, refreshTriggerDistance = trigger, contentColor = green)
+                },
+                modifier  = Modifier.fillMaxSize()
+            ) {
+                when {
+                    uiState.error != null -> {
+                        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp)) {
+                            item {
+                                Column(
+                                    Modifier.fillParentMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(Icons.Filled.ErrorOutline, null, tint = Color.Red, modifier = Modifier.size(64.dp))
+                                    Spacer(Modifier.height(16.dp))
+                                    Text(uiState.error!!, color = Color.Red, fontSize = 16.sp)
+                                    Spacer(Modifier.height(16.dp))
+                                    Button(onClick = viewModel::loadCars, colors = ButtonDefaults.buttonColors(containerColor = green)) {
+                                        Text("Reintentar")
+                                    }
+                                }
+                            }
                         }
                     }
-                }
-                uiState.cars.isEmpty() -> {
-                    Column(
-                        Modifier.fillMaxSize().padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(Icons.Filled.DirectionsCar, null, tint = Color(0xFF8A9A94), modifier = Modifier.size(80.dp))
-                        Spacer(Modifier.height(16.dp))
-                        Text("No tienes vehículos registrados", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1A1A1A))
-                        Spacer(Modifier.height(8.dp))
-                        Text("Agrega tu primer vehículo", fontSize = 14.sp, color = Color(0xFF8A9A94))
-                        Spacer(Modifier.height(24.dp))
-                        Button(onClick = viewModel::showCreateForm, colors = ButtonDefaults.buttonColors(containerColor = green)) {
-                            Icon(Icons.Filled.Add, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Agregar vehículo")
+                    uiState.cars.isEmpty() -> {
+                        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp)) {
+                            item {
+                                Column(
+                                    Modifier.fillParentMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(Icons.Filled.DirectionsCar, null, tint = Color(0xFF8A9A94), modifier = Modifier.size(80.dp))
+                                    Spacer(Modifier.height(16.dp))
+                                    Text("No tienes vehículos registrados", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1A1A1A))
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("Agrega tu primer vehículo", fontSize = 14.sp, color = Color(0xFF8A9A94))
+                                    Spacer(Modifier.height(24.dp))
+                                    Button(onClick = viewModel::showCreateForm, colors = ButtonDefaults.buttonColors(containerColor = green)) {
+                                        Icon(Icons.Filled.Add, null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Agregar vehículo")
+                                    }
+                                }
+                            }
                         }
                     }
-                }
-                else -> {
-                    LazyColumn(
-                        Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(uiState.cars, key = { it.id }) { car ->
-                            CarCard(
-                                car      = car,
-                                green    = green,
-                                onEdit   = { viewModel.showEditForm(car) },
-                                onDelete = { viewModel.showDeleteDialog(car.id) }
-                            )
+                    else -> {
+                        LazyColumn(
+                            Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(uiState.cars, key = { it.id }) { car ->
+                                CarCard(
+                                    car      = car,
+                                    green    = green,
+                                    onEdit   = { viewModel.showEditForm(car) },
+                                    onDelete = { viewModel.showDeleteDialog(car.id) }
+                                )
+                            }
                         }
                     }
                 }

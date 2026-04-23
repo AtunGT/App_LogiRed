@@ -46,7 +46,8 @@
 
         <service
             android:name=".core.notifications.LogiRedFirebaseService"
-            android:exported="false">
+            android:exported="false"
+            >
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>

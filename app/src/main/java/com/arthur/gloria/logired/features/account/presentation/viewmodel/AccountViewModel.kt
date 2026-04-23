@@ -30,7 +30,7 @@ class AccountViewModel @Inject constructor(
         loadUser()
     }
 
-    private fun loadUser() {
+    fun loadUser() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {

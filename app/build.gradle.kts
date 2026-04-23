@@ -61,6 +61,7 @@ android {
 }
 
 dependencies {
+    val roomVersion = "2.6.1"
     implementation(libs.androidx.core.ktx)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -75,6 +76,8 @@ dependencies {
     implementation(libs.androidx.compose.material.icons)
     implementation(libs.hilt.android)
     implementation(libs.androidx.tv.material)
+    implementation(libs.androidx.lifecycle.service)
+    implementation(libs.androidx.room3.runtime)
     ksp(libs.hilt.compiler)
     implementation("com.google.android.libraries.places:places:3.3.0")
     implementation(libs.material)
@@ -102,4 +105,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("com.stripe:stripe-android:20.52.0")
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
 }

@@ -40,8 +40,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.arthur.gloria.logired.R
-import com.arthur.gloria.logired.core.haptic.HapticEvent
-import com.arthur.gloria.logired.core.haptic.rememberHapticManager
 import com.arthur.gloria.logired.features.trip.active.presentation.ui.RouteStep
 import com.arthur.gloria.logired.features.trip.active.presentation.ui.TripPhase
 import com.arthur.gloria.logired.features.trip.active.presentation.viewmodel.ActiveTripViewModel
@@ -72,9 +70,13 @@ fun ActiveTripScreen(
     viewModel: ActiveTripViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val haptic = rememberHapticManager()
     val green = Color(0xFF1E7A5E)
     val context = LocalContext.current
+
+    // Propagar el precio de la propuesta al ViewModel para que el botón de pago aparezca
+    LaunchedEffect(tripId) {
+        viewModel.setProposalPrice(proposalPrice)
+    }
 
     var hasLocationPermission by remember {
         mutableStateOf(
@@ -97,6 +99,9 @@ fun ActiveTripScreen(
         if (hasLocationPermission) viewModel.initialize(tripId, isDriver)
     }
 
+    // Navegar al completarse el viaje.
+    // - Conductor: se activa en onArrivedAtDestination() → tripCompleted=true
+    // - Cliente: se activa en onPaymentCompleted() o dismissCompletedTrip() → tripCompleted=true
     LaunchedEffect(uiState.tripCompleted) {
         if (uiState.tripCompleted) onTripCompleted()
     }
@@ -116,23 +121,6 @@ fun ActiveTripScreen(
                 configuration = PaymentSheet.Configuration(merchantDisplayName = "LogiRed")
             )
         }
-    }
-
-    var isFirstPhase by remember { mutableStateOf(true) }
-    LaunchedEffect(uiState.phase) {
-        if (isFirstPhase) { isFirstPhase = false; return@LaunchedEffect }
-        when (uiState.phase) {
-            TripPhase.GOING_TO_ORIGIN -> haptic.vibrate(HapticEvent.TRIP_STARTED)
-            TripPhase.AT_ORIGIN       -> haptic.vibrate(HapticEvent.ARRIVED_AT_ORIGIN)
-            TripPhase.IN_TRANSIT      -> haptic.vibrate(HapticEvent.JOURNEY_STARTED)
-            TripPhase.COMPLETED       -> haptic.vibrate(HapticEvent.TRIP_COMPLETED)
-        }
-    }
-
-    var isFirstWs by remember { mutableStateOf(true) }
-    LaunchedEffect(uiState.wsConnected) {
-        if (isFirstWs) { isFirstWs = false; return@LaunchedEffect }
-        if (!uiState.wsConnected) haptic.vibrate(HapticEvent.WARNING)
     }
 
     val cameraPositionState = rememberCameraPositionState()
@@ -224,6 +212,7 @@ fun ActiveTripScreen(
                 }
 
                 Column(modifier = Modifier.align(Alignment.BottomCenter)) {
+                    // Banner de reconexión WS
                     if (!uiState.wsConnected && uiState.tripStatus == 3) {
                         Row(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF9C4)).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.WifiOff, null, tint = Color(0xFFF57F17), modifier = Modifier.size(16.dp))
@@ -237,7 +226,15 @@ fun ActiveTripScreen(
                     if (isDriver) {
                         DriverBottomPanel(phase = uiState.phase, status = uiState.tripStatus, green = green, onStartTrip = viewModel::onStartTrip, onArrivedAtOrigin = viewModel::onArrivedAtOrigin, onStartJourney = viewModel::onStartJourney, onArrivedAtDestination = viewModel::onArrivedAtDestination)
                     } else {
-                        ClientBottomPanel(message = uiState.statusMessage, phase = uiState.phase, status = uiState.tripStatus, green = green, proposalPrice = uiState.proposalPrice, onPay = { viewModel.requestPayment(uiState.proposalPrice) })
+                        ClientBottomPanel(
+                            message       = uiState.statusMessage,
+                            phase         = uiState.phase,
+                            status        = uiState.tripStatus,
+                            green         = green,
+                            proposalPrice = uiState.proposalPrice,
+                            onPay         = { viewModel.requestPayment(uiState.proposalPrice) },
+                            onDismiss     = viewModel::dismissCompletedTrip
+                        )
                     }
                 }
             }
@@ -365,7 +362,15 @@ private fun DriverBottomPanel(phase: TripPhase, status: Int, green: Color, onSta
 }
 
 @Composable
-private fun ClientBottomPanel(message: String, phase: TripPhase, status: Int, green: Color, proposalPrice: Double, onPay: () -> Unit) {
+private fun ClientBottomPanel(
+    message: String,
+    phase: TripPhase,
+    status: Int,
+    green: Color,
+    proposalPrice: Double,
+    onPay: () -> Unit,
+    onDismiss: () -> Unit
+) {
     Surface(modifier = Modifier.fillMaxWidth(), color = Color.White, shadowElevation = 12.dp, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
             Box(modifier = Modifier.width(40.dp).height(4.dp).background(Color(0xFFE0E0E0), RoundedCornerShape(2.dp)).align(Alignment.CenterHorizontally))
@@ -395,17 +400,56 @@ private fun ClientBottomPanel(message: String, phase: TripPhase, status: Int, gr
                     Text(text = message, fontSize = 13.sp, color = Color(0xFF757575), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
-            if (phase == TripPhase.COMPLETED && proposalPrice > 0) {
-                Spacer(Modifier.height(12.dp))
-                Button(
-                    onClick  = onPay,
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
-                    shape    = RoundedCornerShape(14.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF6772E5))
-                ) {
-                    Icon(Icons.Filled.Payment, null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text("Pagar ${"%.2f".format(proposalPrice)} MXN", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+
+            // Panel de viaje completado para el cliente
+            if (phase == TripPhase.COMPLETED || status == 5) {
+                Spacer(Modifier.height(16.dp))
+                if (proposalPrice > 0) {
+                    // Hay precio: mostrar monto y botón de pago
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xFFF3F9F6),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Total a pagar", fontSize = 12.sp, color = Color(0xFF757575))
+                                Text(
+                                    "${"%.2f".format(proposalPrice)} MXN",
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1A1A1A)
+                                )
+                            }
+                            Icon(Icons.Filled.Receipt, null, tint = green, modifier = Modifier.size(32.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick  = onPay,
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
+                        shape    = RoundedCornerShape(14.dp),
+                        colors   = ButtonDefaults.buttonColors(containerColor = Color(0xFF6772E5))
+                    ) {
+                        Icon(Icons.Filled.Payment, null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("Pagar ${"%.2f".format(proposalPrice)} MXN", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                } else {
+                    // Sin precio: solo mostrar botón de cerrar
+                    Button(
+                        onClick  = onDismiss,
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
+                        shape    = RoundedCornerShape(14.dp),
+                        colors   = ButtonDefaults.buttonColors(containerColor = green)
+                    ) {
+                        Icon(Icons.Filled.CheckCircle, null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("Viaje finalizado", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
             Spacer(Modifier.height(4.dp))
