@@ -19,7 +19,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "logired.db")
-            .fallbackToDestructiveMigration() // Migración automática al cambiar versión
+            .fallbackToDestructiveMigration()
             .build()
 
     @Provides

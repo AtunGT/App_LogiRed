@@ -61,7 +61,6 @@ class LoginRepositoryImpl @Inject constructor(
             api.resetPassword(ResetPasswordRequest(email, password))
             auth.signOut()
         } catch (e: Exception) {
-            // Si Firebase falla, el backend intentará igual
         }
     }
 }

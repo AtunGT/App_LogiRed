@@ -19,7 +19,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import kotlin.coroutines.resume
 
-
 @HiltWorker
 class LocationWatchdogWorker @AssistedInject constructor(
     @Assisted private val context: Context,
@@ -46,7 +45,6 @@ class LocationWatchdogWorker @AssistedInject constructor(
             phase   = state.phase
         )
 
-
         val pending = rideLocationDao.getUnsynced()
         if (pending.isNotEmpty()) {
             Log.d(TAG, "Intentando sincronizar ${pending.size} ubicaciones pendientes...")
@@ -58,10 +56,8 @@ class LocationWatchdogWorker @AssistedInject constructor(
         return Result.success()
     }
 
-
     private suspend fun syncPending(rideId: Int, token: String, pending: List<RideLocationEntity>) {
         val wsManager = WebSocketManager()
-
 
         val connected = withTimeoutOrNull(5_000L) {
             suspendCancellableCoroutine { cont ->

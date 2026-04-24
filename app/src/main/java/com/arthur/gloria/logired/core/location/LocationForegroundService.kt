@@ -103,8 +103,6 @@ class LocationForegroundService : LifecycleService() {
         super.onStartCommand(intent, flags, startId)
         when (intent?.action) {
             ACTION_START -> {
-                // Guard: si ya está iniciado (p. ej. WorkManager llama start() cuando el servicio
-                // ya corre), ignorar para no duplicar WS ni GPS.
                 if (isStarted) {
                     Log.d(TAG, "Servicio ya iniciado, ignorando ACTION_START duplicado")
                     return START_STICKY
@@ -118,7 +116,6 @@ class LocationForegroundService : LifecycleService() {
                 }
                 isStarted = true
                 startForeground(NOTIFICATION_ID, buildNotification())
-                // Persistir en DataStore para sobrevivir muerte del proceso
                 lifecycleScope.launch {
                     activeRideStore.saveActiveRide(rideId, token, currentPhase)
                 }
@@ -128,16 +125,13 @@ class LocationForegroundService : LifecycleService() {
             ACTION_UPDATE_PHASE -> {
                 currentPhase = intent.getStringExtra(EXTRA_PHASE) ?: currentPhase
                 Log.d(TAG, "Fase actualizada a: $currentPhase")
-                // Actualizar también en DataStore para que WorkManager tenga la fase correcta
                 lifecycleScope.launch {
                     activeRideStore.updatePhase(currentPhase)
                 }
             }
             ACTION_STOP -> stopTracking()
             else -> {
-                // intent == null: Android reinició el servicio via START_STICKY tras ser eliminado.
-                // En este caso no hay parámetros en el intent, los recuperamos del DataStore.
-                if (isStarted) return START_STICKY // ya está corriendo, nada que hacer
+                if (isStarted) return START_STICKY
                 Log.d(TAG, "Servicio reiniciado por Android (intent null), recuperando estado...")
                 lifecycleScope.launch {
                     val state = activeRideStore.activeRide.first()
@@ -179,7 +173,6 @@ class LocationForegroundService : LifecycleService() {
         wsManager.onOpen = {
             isWsConnected = true
             Log.d(TAG, "WS publish conectado")
-            // Al reconectar, enviar todas las posiciones pendientes en orden cronológico
             lifecycleScope.launch {
                 val pending = rideLocationDao.getUnsynced()
                 Log.d(TAG, "Sincronizando ${pending.size} posiciones pendientes")
@@ -188,10 +181,10 @@ class LocationForegroundService : LifecycleService() {
                         put("lat", location.lat)
                         put("lng", location.lng)
                         put("timestamp", location.timestamp / 1000)
-                        put("phase", location.phase) // Usar la phase guardada, no la actual
+                        put("phase", location.phase)
                     }.toString()
                     if (wsManager.send(msg)) {
-                        rideLocationDao.markSynced(location.id) // Marcar por id, no reemplazar
+                        rideLocationDao.markSynced(location.id)
                     }
                 }
             }
@@ -223,14 +216,13 @@ class LocationForegroundService : LifecycleService() {
 
         lifecycleScope.launch {
             val sent = if (isWsConnected) wsManager.send(message) else false
-            // Siempre guardar en DB: si se envió → synced=true, si no → synced=false para reintentar
             rideLocationDao.insert(
                 RideLocationEntity(
                     rideId = rideId,
                     lat = lat,
                     lng = lng,
                     timestamp = timestamp,
-                    phase = currentPhase, // Guardar la fase activa en el momento del registro
+                    phase = currentPhase,
                     synced = sent
                 )
             )
@@ -239,7 +231,6 @@ class LocationForegroundService : LifecycleService() {
 
     private fun stopTracking() {
         isStarted = false
-        // Limpiar estado persistido: WorkManager no debe reiniciar el servicio si el viaje terminó
         lifecycleScope.launch {
             activeRideStore.clearActiveRide()
         }

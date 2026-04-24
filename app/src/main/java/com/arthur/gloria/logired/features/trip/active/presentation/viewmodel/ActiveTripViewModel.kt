@@ -85,28 +85,17 @@ class ActiveTripViewModel @Inject constructor(
         currentIsDriver = isDriver
         _uiState.update { it.copy(tripId = tripId, isDriver = isDriver, isLoading = true) }
 
-        // El conductor observa Room DB para reflejar su posición en el mapa.
-        // El ForegroundService escribe en DB; el ViewModel solo lee.
         if (isDriver) observeDriverLocationFromDb(tripId)
 
         viewModelScope.launch { loadTrip(tripId, isDriver) }
     }
 
-    /**
-     * Propaga el precio de la propuesta al estado de UI para mostrar el botón de pago
-     * cuando el viaje complete. Debe llamarse desde la Screen con el parámetro recibido
-     * en la navegación.
-     */
     fun setProposalPrice(price: Double) {
         if (price > 0.0 && _uiState.value.proposalPrice != price) {
             _uiState.update { it.copy(proposalPrice = price) }
         }
     }
 
-    /**
-     * Observa la última posición guardada en Room DB para el viaje dado.
-     * Actualiza driverLatLng en el estado cuando el ForegroundService registra una nueva posición.
-     */
     private fun observeDriverLocationFromDb(tripId: Int) {
         locationObserverJob?.cancel()
         locationObserverJob = viewModelScope.launch {
@@ -226,7 +215,6 @@ class ActiveTripViewModel @Inject constructor(
                         when (trip.status) {
                             3 -> {
                                 statusPollingJob?.cancel()
-                                // Viaje iniciado: vibrar para el cliente
                                 hapticManager.vibrate(HapticEvent.TRIP_STARTED)
                                 connectWebSocket(tripId, false)
                                 _uiState.update {
@@ -238,7 +226,6 @@ class ActiveTripViewModel @Inject constructor(
                                 break
                             }
                             5 -> {
-                                // El viaje terminó mientras el cliente esperaba (caso raro)
                                 statusPollingJob?.cancel()
                                 hapticManager.vibrate(HapticEvent.TRIP_COMPLETED)
                                 _uiState.update {
@@ -246,7 +233,6 @@ class ActiveTripViewModel @Inject constructor(
                                         tripStatus = 5,
                                         phase = TripPhase.COMPLETED,
                                         statusMessage = getStatusMessage(5, TripPhase.COMPLETED)
-                                        // NO se pone tripCompleted=true aquí: el cliente debe pagar primero
                                     )
                                 }
                                 break
@@ -260,15 +246,10 @@ class ActiveTripViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Polling de rescate: se activa cuando el WS del cliente se cierra durante un viaje activo
-     * (status=3). Consulta el API hasta detectar que el viaje terminó (status=5) o recupera
-     * la conexión WS si el viaje sigue activo.
-     */
     private fun startStatusPollingForCompletion() {
         statusPollingJob?.cancel()
         statusPollingJob = viewModelScope.launch {
-            repeat(20) { // hasta ~60 segundos
+            repeat(20) {
                 if (_uiState.value.tripStatus != 3) return@launch
                 try {
                     val response = apiService.getRideById(currentTripId)
@@ -276,20 +257,17 @@ class ActiveTripViewModel @Inject constructor(
                         val trip = response.body()?.ride
                         when (trip?.status) {
                             5 -> {
-                                // Viaje terminado: notificar al cliente con vibración y mostrar UI de pago
                                 hapticManager.vibrate(HapticEvent.TRIP_COMPLETED)
                                 _uiState.update {
                                     it.copy(
                                         tripStatus = 5,
                                         phase = TripPhase.COMPLETED,
                                         statusMessage = getStatusMessage(5, TripPhase.COMPLETED)
-                                        // NO tripCompleted=true: el cliente paga primero
                                     )
                                 }
                                 return@launch
                             }
                             3 -> {
-                                // Viaje sigue activo: reconectar WS
                                 connectWebSocket(currentTripId, false)
                                 return@launch
                             }
@@ -301,11 +279,6 @@ class ActiveTripViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Ambos roles se suscriben al WebSocket del room.
-     * El ForegroundService es el único que publica; el ViewModel solo escucha.
-     * Esto elimina la publicación duplicada.
-     */
     private fun connectWebSocket(tripId: Int, isDriver: Boolean) {
         viewModelScope.launch {
             val token = tokenManager.token.first() ?: return@launch
@@ -320,7 +293,6 @@ class ActiveTripViewModel @Inject constructor(
                 _uiState.update { it.copy(wsConnected = false) }
                 hapticManager.vibrate(HapticEvent.WARNING)
                 if (!isDriver && _uiState.value.tripStatus == 3) {
-                    // Cliente en viaje activo: poll para detectar si el conductor terminó
                     startStatusPollingForCompletion()
                 } else {
                     scheduleReconnect(tripId, isDriver)
@@ -329,7 +301,6 @@ class ActiveTripViewModel @Inject constructor(
             wsManager.onClosed = {
                 _uiState.update { it.copy(wsConnected = false) }
                 if (!isDriver && _uiState.value.tripStatus == 3) {
-                    // WS cerrado para cliente durante viaje: verificar si terminó
                     startStatusPollingForCompletion()
                 }
             }
@@ -360,7 +331,6 @@ class ActiveTripViewModel @Inject constructor(
                 else              -> null
             }
 
-            // Vibrar en el cliente cuando la fase del conductor cambia
             if (!currentIsDriver && newPhase != null && newPhase != _uiState.value.phase) {
                 val event = when (newPhase) {
                     TripPhase.GOING_TO_ORIGIN -> HapticEvent.TRIP_STARTED
@@ -467,11 +437,8 @@ class ActiveTripViewModel @Inject constructor(
                 val response = apiService.updateRideStatus(_uiState.value.tripId, UpdateStatusRequest(3))
                 if (response.isSuccessful) {
                     val token = tokenManager.token.first() ?: return@launch
-                    // Iniciar el ForegroundService que publicará la ubicación
                     LocationForegroundService.start(context, currentTripId, token, "GOING_TO_ORIGIN")
-                    // Programar el watchdog de WorkManager para mantener vivo el servicio
                     scheduleWatchdog()
-                    // Vibrar: conductor inicia el viaje
                     hapticManager.vibrate(HapticEvent.TRIP_STARTED)
                     _uiState.update {
                         it.copy(
@@ -491,18 +458,12 @@ class ActiveTripViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Programa un PeriodicWorkRequest que se ejecuta cada 15 minutos.
-     * El worker verifica que el LocationForegroundService sigue vivo y,
-     * si fue eliminado, lo reinicia con los parámetros del DataStore.
-     * También sincroniza ubicaciones pendientes si el WS estuvo caído.
-     */
     private fun scheduleWatchdog() {
         val request = PeriodicWorkRequestBuilder<LocationWatchdogWorker>(
             repeatInterval         = 15L,
             repeatIntervalTimeUnit = TimeUnit.MINUTES
         )
-            .setConstraints(Constraints.NONE) // Sin restricciones: debe correr aunque no haya red
+            .setConstraints(Constraints.NONE)
             .build()
 
         workManager.enqueueUniquePeriodicWork(
@@ -513,16 +474,13 @@ class ActiveTripViewModel @Inject constructor(
         Log.d("ActiveTripVM", "WorkManager watchdog programado")
     }
 
-    /** Cancela el watchdog cuando el viaje termina. */
     private fun cancelWatchdog() {
         workManager.cancelUniqueWork(LocationWatchdogWorker.WORK_NAME)
         Log.d("ActiveTripVM", "WorkManager watchdog cancelado")
     }
 
     fun onArrivedAtOrigin() {
-        // Vibrar: conductor llegó al origen
         hapticManager.vibrate(HapticEvent.ARRIVED_AT_ORIGIN)
-        // Notificar al ForegroundService para que envíe la phase correcta
         LocationForegroundService.updatePhase(context, "AT_ORIGIN")
         _uiState.update {
             it.copy(
@@ -537,9 +495,7 @@ class ActiveTripViewModel @Inject constructor(
     }
 
     fun onStartJourney() {
-        // Vibrar: conductor inicia el trayecto
         hapticManager.vibrate(HapticEvent.JOURNEY_STARTED)
-        // Notificar al ForegroundService
         LocationForegroundService.updatePhase(context, "IN_TRANSIT")
         viewModelScope.launch {
             _uiState.update {
@@ -572,11 +528,8 @@ class ActiveTripViewModel @Inject constructor(
             try {
                 val response = apiService.updateRideStatus(_uiState.value.tripId, UpdateStatusRequest(5))
                 if (response.isSuccessful) {
-                    // Vibrar: conductor llegó al destino
                     hapticManager.vibrate(HapticEvent.TRIP_COMPLETED)
-                    // Cancelar el watchdog de WorkManager (viaje terminado)
                     cancelWatchdog()
-                    // Detener el ForegroundService y limpiar DB
                     LocationForegroundService.stop(context)
                     viewModelScope.launch { rideLocationDao.deleteByRide(currentTripId) }
                     locationObserverJob?.cancel()
@@ -586,7 +539,7 @@ class ActiveTripViewModel @Inject constructor(
                         it.copy(
                             tripStatus = 5,
                             phase = TripPhase.COMPLETED,
-                            tripCompleted = true, // Conductor navega inmediatamente
+                            tripCompleted = true,
                             statusMessage = getStatusMessage(5, TripPhase.COMPLETED)
                         )
                     }
@@ -599,10 +552,6 @@ class ActiveTripViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Llamado por el cliente cuando completa el pago exitosamente.
-     * Aquí sí se navega fuera de la pantalla.
-     */
     fun onPaymentCompleted() {
         _uiState.update { it.copy(showPaymentSheet = false, tripCompleted = true) }
     }
@@ -611,17 +560,11 @@ class ActiveTripViewModel @Inject constructor(
         _uiState.update { it.copy(showPaymentSheet = false) }
     }
 
-    /**
-     * Llamado por el cliente cuando no hay precio o quiere cerrar la pantalla
-     * de viaje completado sin pagar (precio = 0).
-     */
     fun dismissCompletedTrip() {
         _uiState.update { it.copy(tripCompleted = true) }
     }
 
     fun requestPayment(amount: Double) {
-        // TODO: implementar integración de pago con Stripe
-        // Por ahora, marcar como completado para navegar
         _uiState.update { it.copy(showPaymentSheet = true) }
     }
 

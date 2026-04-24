@@ -25,7 +25,6 @@ class LogiRedApp : Application(), ImageLoaderFactory, Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
-    // WorkManager usará HiltWorkerFactory para inyectar dependencias en los workers
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)

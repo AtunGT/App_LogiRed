@@ -11,11 +11,6 @@ import kotlinx.coroutines.flow.map
 
 private val Context.activeRideDataStore by preferencesDataStore(name = "active_ride_state")
 
-/**
- * DataStore persistente que guarda el estado del viaje activo del conductor.
- * Sobrevive a la muerte del proceso, lo que permite que WorkManager y el servicio
- * puedan recuperar el contexto del viaje al reiniciarse.
- */
 class ActiveRideStore(private val context: Context) {
 
     companion object {
@@ -25,7 +20,6 @@ class ActiveRideStore(private val context: Context) {
         private val KEY_IS_ACTIVE = booleanPreferencesKey("is_active")
     }
 
-    /** Emite el viaje activo actual, o null si no hay ninguno. */
     val activeRide: Flow<ActiveRideState?> = context.activeRideDataStore.data.map { prefs ->
         val isActive = prefs[KEY_IS_ACTIVE] == true
         if (isActive) {
@@ -41,7 +35,6 @@ class ActiveRideStore(private val context: Context) {
         } else null
     }
 
-    /** Persiste un viaje activo. Llamar cuando el conductor inicia el viaje. */
     suspend fun saveActiveRide(rideId: Int, token: String, phase: String) {
         context.activeRideDataStore.edit { prefs ->
             prefs[KEY_RIDE_ID]   = rideId
@@ -51,14 +44,12 @@ class ActiveRideStore(private val context: Context) {
         }
     }
 
-    /** Actualiza solo la fase del viaje activo. */
     suspend fun updatePhase(phase: String) {
         context.activeRideDataStore.edit { prefs ->
             prefs[KEY_PHASE] = phase
         }
     }
 
-    /** Limpia el viaje activo. Llamar cuando el conductor llega al destino. */
     suspend fun clearActiveRide() {
         context.activeRideDataStore.edit { prefs ->
             prefs[KEY_IS_ACTIVE] = false

@@ -172,7 +172,7 @@ fun AccountScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Cerrar sesión", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
-                } // end inner Column
+                }
             }
         }
     }

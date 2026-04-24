@@ -73,7 +73,6 @@ fun ActiveTripScreen(
     val green = Color(0xFF1E7A5E)
     val context = LocalContext.current
 
-    // Propagar el precio de la propuesta al ViewModel para que el botón de pago aparezca
     LaunchedEffect(tripId) {
         viewModel.setProposalPrice(proposalPrice)
     }
@@ -99,9 +98,6 @@ fun ActiveTripScreen(
         if (hasLocationPermission) viewModel.initialize(tripId, isDriver)
     }
 
-    // Navegar al completarse el viaje.
-    // - Conductor: se activa en onArrivedAtDestination() → tripCompleted=true
-    // - Cliente: se activa en onPaymentCompleted() o dismissCompletedTrip() → tripCompleted=true
     LaunchedEffect(uiState.tripCompleted) {
         if (uiState.tripCompleted) onTripCompleted()
     }
@@ -212,7 +208,6 @@ fun ActiveTripScreen(
                 }
 
                 Column(modifier = Modifier.align(Alignment.BottomCenter)) {
-                    // Banner de reconexión WS
                     if (!uiState.wsConnected && uiState.tripStatus == 3) {
                         Row(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF9C4)).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.WifiOff, null, tint = Color(0xFFF57F17), modifier = Modifier.size(16.dp))
@@ -401,11 +396,9 @@ private fun ClientBottomPanel(
                 }
             }
 
-            // Panel de viaje completado para el cliente
             if (phase == TripPhase.COMPLETED || status == 5) {
                 Spacer(Modifier.height(16.dp))
                 if (proposalPrice > 0) {
-                    // Hay precio: mostrar monto y botón de pago
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = Color(0xFFF3F9F6),
@@ -439,7 +432,6 @@ private fun ClientBottomPanel(
                         Text("Pagar ${"%.2f".format(proposalPrice)} MXN", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                     }
                 } else {
-                    // Sin precio: solo mostrar botón de cerrar
                     Button(
                         onClick  = onDismiss,
                         modifier = Modifier.fillMaxWidth().height(54.dp),

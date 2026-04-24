@@ -69,11 +69,6 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!--
-            Deshabilitar el inicializador automático de WorkManager.
-            Obligatorio cuando se usa Configuration.Provider con HiltWorkerFactory.
-            Sin esto, WorkManager se inicializa antes de que Hilt inyecte el WorkerFactory.
-        -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"

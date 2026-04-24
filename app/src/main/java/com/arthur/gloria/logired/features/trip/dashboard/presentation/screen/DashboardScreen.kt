@@ -139,8 +139,8 @@ fun DashboardScreen(
         }
 
         Spacer(Modifier.height(24.dp))
-        } // end Column
-    } // end SwipeRefresh
+        }
+    }
 }
 
 @Composable
