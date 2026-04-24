@@ -107,5 +107,9 @@ dependencies {
     implementation("com.stripe:stripe-android:20.52.0")
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
+    // WorkManager + Hilt integration
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
     ksp("androidx.room:room-compiler:$roomVersion")
 }

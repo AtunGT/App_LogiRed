@@ -24,8 +24,10 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.arthur.gloria.logired.core.local.ActiveRideStore
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject
@@ -34,6 +36,7 @@ import javax.inject.Inject
 class LocationForegroundService : LifecycleService() {
 
     @Inject lateinit var rideLocationDao: RideLocationDao
+    @Inject lateinit var activeRideStore: ActiveRideStore
 
     private val wsManager = WebSocketManager()
     private lateinit var fusedClient: FusedLocationProviderClient
@@ -42,6 +45,7 @@ class LocationForegroundService : LifecycleService() {
     private var token: String = ""
     private var currentPhase: String = "GOING_TO_ORIGIN"
     private var isWsConnected = false
+    private var isStarted = false
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -99,22 +103,59 @@ class LocationForegroundService : LifecycleService() {
         super.onStartCommand(intent, flags, startId)
         when (intent?.action) {
             ACTION_START -> {
+                // Guard: si ya está iniciado (p. ej. WorkManager llama start() cuando el servicio
+                // ya corre), ignorar para no duplicar WS ni GPS.
+                if (isStarted) {
+                    Log.d(TAG, "Servicio ya iniciado, ignorando ACTION_START duplicado")
+                    return START_STICKY
+                }
                 rideId = intent.getIntExtra(EXTRA_RIDE_ID, -1)
-                token = intent.getStringExtra(EXTRA_TOKEN) ?: ""
+                token  = intent.getStringExtra(EXTRA_TOKEN) ?: ""
                 currentPhase = intent.getStringExtra(EXTRA_PHASE) ?: "GOING_TO_ORIGIN"
                 if (rideId == -1 || token.isEmpty()) {
                     stopSelf()
                     return START_NOT_STICKY
                 }
+                isStarted = true
                 startForeground(NOTIFICATION_ID, buildNotification())
+                // Persistir en DataStore para sobrevivir muerte del proceso
+                lifecycleScope.launch {
+                    activeRideStore.saveActiveRide(rideId, token, currentPhase)
+                }
                 connectWebSocket()
                 startLocationUpdates()
             }
             ACTION_UPDATE_PHASE -> {
                 currentPhase = intent.getStringExtra(EXTRA_PHASE) ?: currentPhase
                 Log.d(TAG, "Fase actualizada a: $currentPhase")
+                // Actualizar también en DataStore para que WorkManager tenga la fase correcta
+                lifecycleScope.launch {
+                    activeRideStore.updatePhase(currentPhase)
+                }
             }
             ACTION_STOP -> stopTracking()
+            else -> {
+                // intent == null: Android reinició el servicio via START_STICKY tras ser eliminado.
+                // En este caso no hay parámetros en el intent, los recuperamos del DataStore.
+                if (isStarted) return START_STICKY // ya está corriendo, nada que hacer
+                Log.d(TAG, "Servicio reiniciado por Android (intent null), recuperando estado...")
+                lifecycleScope.launch {
+                    val state = activeRideStore.activeRide.first()
+                    if (state != null) {
+                        rideId = state.rideId
+                        token  = state.token
+                        currentPhase = state.phase
+                        isStarted = true
+                        startForeground(NOTIFICATION_ID, buildNotification())
+                        connectWebSocket()
+                        startLocationUpdates()
+                        Log.d(TAG, "Servicio restaurado: rideId=$rideId, phase=$currentPhase")
+                    } else {
+                        Log.w(TAG, "Sin viaje activo en DataStore, deteniendo servicio")
+                        stopSelf()
+                    }
+                }
+            }
         }
         return START_STICKY
     }
@@ -197,6 +238,11 @@ class LocationForegroundService : LifecycleService() {
     }
 
     private fun stopTracking() {
+        isStarted = false
+        // Limpiar estado persistido: WorkManager no debe reiniciar el servicio si el viaje terminó
+        lifecycleScope.launch {
+            activeRideStore.clearActiveRide()
+        }
         fusedClient.removeLocationUpdates(locationCallback)
         wsManager.disconnect()
         stopForeground(STOP_FOREGROUND_REMOVE)

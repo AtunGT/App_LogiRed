@@ -7,6 +7,10 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.arthur.gloria.logired.core.database.dao.RideLocationDao
 import com.arthur.gloria.logired.core.haptic.HapticEvent
 import com.arthur.gloria.logired.core.haptic.HapticManager
@@ -15,6 +19,7 @@ import com.arthur.gloria.logired.core.location.LocationForegroundService
 import com.arthur.gloria.logired.core.network.ApiService
 import com.arthur.gloria.logired.core.network.model.UpdateStatusRequest
 import com.arthur.gloria.logired.core.websocket.WebSocketManager
+import com.arthur.gloria.logired.core.worker.LocationWatchdogWorker
 import com.arthur.gloria.logired.features.trip.active.presentation.ui.ActiveTripUiState
 import com.arthur.gloria.logired.features.trip.active.presentation.ui.RouteStep
 import com.arthur.gloria.logired.features.trip.active.presentation.ui.TripPhase
@@ -38,6 +43,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.*
 
@@ -47,6 +53,7 @@ class ActiveTripViewModel @Inject constructor(
     private val tokenManager: TokenManager,
     private val rideLocationDao: RideLocationDao,
     private val hapticManager: HapticManager,
+    private val workManager: WorkManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -462,6 +469,8 @@ class ActiveTripViewModel @Inject constructor(
                     val token = tokenManager.token.first() ?: return@launch
                     // Iniciar el ForegroundService que publicará la ubicación
                     LocationForegroundService.start(context, currentTripId, token, "GOING_TO_ORIGIN")
+                    // Programar el watchdog de WorkManager para mantener vivo el servicio
+                    scheduleWatchdog()
                     // Vibrar: conductor inicia el viaje
                     hapticManager.vibrate(HapticEvent.TRIP_STARTED)
                     _uiState.update {
@@ -480,6 +489,34 @@ class ActiveTripViewModel @Inject constructor(
                 _uiState.update { it.copy(error = "Error al iniciar viaje: ${e.message}") }
             }
         }
+    }
+
+    /**
+     * Programa un PeriodicWorkRequest que se ejecuta cada 15 minutos.
+     * El worker verifica que el LocationForegroundService sigue vivo y,
+     * si fue eliminado, lo reinicia con los parámetros del DataStore.
+     * También sincroniza ubicaciones pendientes si el WS estuvo caído.
+     */
+    private fun scheduleWatchdog() {
+        val request = PeriodicWorkRequestBuilder<LocationWatchdogWorker>(
+            repeatInterval         = 15L,
+            repeatIntervalTimeUnit = TimeUnit.MINUTES
+        )
+            .setConstraints(Constraints.NONE) // Sin restricciones: debe correr aunque no haya red
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            LocationWatchdogWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request
+        )
+        Log.d("ActiveTripVM", "WorkManager watchdog programado")
+    }
+
+    /** Cancela el watchdog cuando el viaje termina. */
+    private fun cancelWatchdog() {
+        workManager.cancelUniqueWork(LocationWatchdogWorker.WORK_NAME)
+        Log.d("ActiveTripVM", "WorkManager watchdog cancelado")
     }
 
     fun onArrivedAtOrigin() {
@@ -537,6 +574,8 @@ class ActiveTripViewModel @Inject constructor(
                 if (response.isSuccessful) {
                     // Vibrar: conductor llegó al destino
                     hapticManager.vibrate(HapticEvent.TRIP_COMPLETED)
+                    // Cancelar el watchdog de WorkManager (viaje terminado)
+                    cancelWatchdog()
                     // Detener el ForegroundService y limpiar DB
                     LocationForegroundService.stop(context)
                     viewModelScope.launch { rideLocationDao.deleteByRide(currentTripId) }

@@ -1,6 +1,8 @@
 package com.arthur.gloria.logired
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.request.CachePolicy
@@ -10,6 +12,7 @@ import dagger.hilt.android.HiltAndroidApp
 import okhttp3.OkHttpClient
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
+import javax.inject.Inject
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
@@ -17,7 +20,16 @@ import com.arthur.gloria.logired.BuildConfig
 import com.stripe.android.PaymentConfiguration
 
 @HiltAndroidApp
-class LogiRedApp : Application(), ImageLoaderFactory {
+class LogiRedApp : Application(), ImageLoaderFactory, Configuration.Provider {
+
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
+    // WorkManager usará HiltWorkerFactory para inyectar dependencias en los workers
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
 
     override fun onCreate() {
         super.onCreate()
