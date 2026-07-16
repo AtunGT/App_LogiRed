@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "985546482165",
+    "project_id": "logired-d4dda",
+    "storage_bucket": "logired-d4dda.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:985546482165:android:2bfb6026c844310c1500bc",
+        "android_client_info": {
+          "package_name": "com.arthur.gloria.alhan.logired"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "985546482165-cs3bcmnhtis8v9204j8e9m1bb86vk0te.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.arthur.gloria.alhan.logired",
+            "certificate_hash": "9b4929502b79e08e42f31dc3f0c301d825e06398"
+          }
+        },
+        {
+          "client_id": "985546482165-t8c3ij9kauh202eb97lfkioporjkh4bo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBChCjCRRTvHAen9u4ekZ7YsMW3wm6XfxI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "985546482165-t8c3ij9kauh202eb97lfkioporjkh4bo.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "985546482165-l59kvipq29m9t69j9gmmd10lchih9vjp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.arthur.gloria.alhan.logired"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

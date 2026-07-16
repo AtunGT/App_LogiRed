@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fondo del ícono adaptativo del launcher (blanco, coincide con flutter_launcher_icons) -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Color de acento para notificaciones FCM (background del icono y LED) -->
+    <color name="notification_color">#1D6B50</color>
+</resources>

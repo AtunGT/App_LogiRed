@@ -1,0 +1,13 @@
+# Copia este archivo como "key.properties" (mismo directorio) y rellena tus datos.
+# NO lo subas a git: key.properties y los *.jks/*.keystore ya están en .gitignore.
+#
+# Genera el keystore con (elige tus propias contraseñas):
+#   keytool -genkey -v -keystore C:\Users\TU_USUARIO\logired-release.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias logired
+#
+# Luego pon aquí la ruta absoluta al .jks y las contraseñas que elegiste.
+
+storePassword=TU_STORE_PASSWORD
+keyPassword=TU_KEY_PASSWORD
+keyAlias=logired
+storeFile=C:\\Users\\AtunGT\\logired-release.jks
