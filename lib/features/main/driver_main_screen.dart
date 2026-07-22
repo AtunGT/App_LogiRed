@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/di/service_locator.dart';
+import '../../core/local/token_manager.dart';
+import '../../core/network/api_service.dart';
 import '../../core/utils/responsive.dart';
 import '../../core/widgets/scrollable_nav_rail.dart';
 import '../phone_verification/presentation/phone_verification_banner.dart';
@@ -45,8 +46,9 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
   }
 
   Future<void> _loadProposalCount() async {
+    final api = context.read<ApiService>();
     try {
-      final res = await sl.apiService.getMyAcceptedTrips();
+      final res = await api.getMyAcceptedTrips();
       final list = (res.data['rides'] ?? res.data) as List? ?? [];
       if (mounted) setState(() => _proposalCount = list.length);
     } catch (_) {}
@@ -114,7 +116,7 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
     );
 
     return ChangeNotifierProvider(
-      create: (_) => PhoneVerificationProvider()..init(),
+      create: (c) => PhoneVerificationProvider(c.read<ApiService>(), c.read<TokenManager>())..init(),
       child: Builder(builder: (ctx) {
         if (useRail) {
           return Scaffold(

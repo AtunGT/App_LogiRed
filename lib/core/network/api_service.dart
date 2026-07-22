@@ -38,6 +38,12 @@ class ApiService {
   Future<Response> updateUser(FormData data) =>
       _dio.put('users/me', data: data);
 
+  /// Re-postulacion de un conductor rechazado. Todos los campos son opcionales:
+  /// solo se envia lo que el conductor corrigio, el resto se conserva. La API
+  /// devuelve su `driver_status` a `pending`.
+  Future<Response> reapplyDriver(FormData data) =>
+      _dio.post('users/me/reapply', data: data);
+
   Future<Response> resetPassword(Map<String, dynamic> data) =>
       _dio.put('users/password-reset', data: data);
 

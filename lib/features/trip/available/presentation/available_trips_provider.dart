@@ -1,19 +1,22 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/local/token_manager.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
-import '../data/repository/available_trips_repository_impl.dart';
+import '../../../../core/state/view_state.dart';
 import '../domain/available_trips_repository.dart';
 
-class AvailableTripsProvider extends ChangeNotifier {
-  final AvailableTripsRepository _repository = AvailableTripsRepositoryImpl();
+class AvailableTripsProvider extends ChangeNotifier with ViewStateMixin {
+  final AvailableTripsRepository _repository;
+  final ApiService _api;
+  final TokenManager _tokens;
+
+  AvailableTripsProvider(this._repository, this._api, this._tokens);
 
   List<Trip> trips = [];
   final Set<int> _proposedIds = {};
   String city = '';
   String userInitial = 'C';
-  bool isLoading = false;
-  String? error;
 
   void excludeTrip(int tripId) {
     _proposedIds.add(tripId);
@@ -22,10 +25,10 @@ class AvailableTripsProvider extends ChangeNotifier {
   }
 
   Future<void> loadCityAndSearch() async {
-    city = await sl.tokenManager.getCityWork() ?? '';
-    final userId = await sl.tokenManager.getUserId() ?? 0;
+    city = await _tokens.getCityWork() ?? '';
+    final userId = await _tokens.getUserId() ?? 0;
     try {
-      final response = await sl.apiService.getUserProfile(userId);
+      final response = await _api.getUserProfile(userId);
       final user = UserResponse.fromJson(response.data);
       userInitial = user.name.isNotEmpty ? user.name[0].toUpperCase() : 'C';
     } catch (_) {}
@@ -39,7 +42,7 @@ class AvailableTripsProvider extends ChangeNotifier {
 
     try {
       try {
-        final res = await sl.apiService.getMyProposals();
+        final res = await _api.getMyProposals();
         final list = (res.data['proposals'] ?? res.data) as List? ?? [];
         for (final e in list) {
           final m = e as Map<String, dynamic>;

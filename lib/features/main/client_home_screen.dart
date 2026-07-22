@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/di/service_locator.dart';
+import '../../core/network/api_service.dart';
 import '../../core/network/model/models.dart';
 import '../../core/utils/ride_status.dart';
 import '../trip/home/presentation/home_provider.dart';
@@ -28,7 +28,7 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
 
   Future<void> _loadInProgressTrip() async {
     try {
-      final res = await sl.apiService.getMyRequestedTrips();
+      final res = await context.read<ApiService>().getMyRequestedTrips();
       final list = (res.data['rides'] ?? res.data) as List? ?? [];
       for (final e in list) {
         final trip = Trip.fromJson(e as Map<String, dynamic>);

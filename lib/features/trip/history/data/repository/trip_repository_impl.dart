@@ -1,8 +1,12 @@
-import '../../../../../core/di/service_locator.dart';
+import '../../../../../core/network/api_service.dart';
 import '../../../../../core/network/model/models.dart';
 import '../../domain/trip_history_repository.dart';
 
 class TripHistoryRepositoryImpl implements TripHistoryRepository {
+  final ApiService _api;
+
+  TripHistoryRepositoryImpl(this._api);
+
   @override
   Future<List<Trip>> getClientTrips() => _fetchHistory();
 
@@ -10,7 +14,7 @@ class TripHistoryRepositoryImpl implements TripHistoryRepository {
   Future<List<Trip>> getDriverTrips() => _fetchHistory();
 
   Future<List<Trip>> _fetchHistory() async {
-    final response = await sl.apiService.getTripsHistory();
+    final response = await _api.getTripsHistory();
     final data = response.data;
     List<dynamic> list;
     if (data is List) {

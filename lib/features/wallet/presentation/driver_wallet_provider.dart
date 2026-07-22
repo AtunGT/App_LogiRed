@@ -1,20 +1,22 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import '../../../core/di/service_locator.dart';
+import '../../../core/network/api_service.dart';
 import '../../../core/network/model/models.dart';
+import '../../../core/state/view_state.dart';
 
 enum WalletPeriod { day, month }
 
-class DriverWalletProvider extends ChangeNotifier {
+class DriverWalletProvider extends ChangeNotifier with ViewStateMixin {
+  final ApiService _api;
+
+  DriverWalletProvider(this._api);
+
   static const _pageSize = 20;
 
-  bool isLoading = false;
   bool isLoadingMore = false;
 
-  /// Todo falló: pantalla completa de error (con detalle por endpoint).
-  String? error;
-
   /// Falló solo una parte: banner con el detalle, el resto se muestra.
+  /// (`error`, del mixin, cubre el caso "todo falló": pantalla completa.)
   String? partialError;
   bool _loadedOnce = false;
 
@@ -129,7 +131,7 @@ class DriverWalletProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchWallet() async {
-    final res = await sl.apiService.getDriverWallet();
+    final res = await _api.getDriverWallet();
     wallet = DriverWallet.fromJson(res.data as Map<String, dynamic>);
   }
 
@@ -140,7 +142,7 @@ class DriverWalletProvider extends ChangeNotifier {
         : _dateKey(DateTime(now.year, now.month - 5, 1));
     final to = _dateKey(now.add(const Duration(days: 1)));
 
-    final res = await sl.apiService.getDriverWalletSummary(
+    final res = await _api.getDriverWalletSummary(
       period: p == WalletPeriod.day ? 'day' : 'month',
       from: from,
       to: to,
@@ -162,7 +164,7 @@ class DriverWalletProvider extends ChangeNotifier {
 
   Future<void> _fetchMovements({bool reset = false}) async {
     if (reset) _page = 1;
-    final res = await sl.apiService.getDriverWalletTransactions(
+    final res = await _api.getDriverWalletTransactions(
       page: _page,
       limit: _pageSize,
     );

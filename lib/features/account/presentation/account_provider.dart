@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../../core/di/service_locator.dart';
+import '../../../core/local/token_manager.dart';
+import '../../../core/network/api_service.dart';
 import '../../../core/network/model/models.dart';
+import '../../../core/state/view_state.dart';
 
-class AccountProvider extends ChangeNotifier {
+class AccountProvider extends ChangeNotifier with ViewStateMixin {
+  final ApiService _api;
+  final TokenManager _tokens;
+
+  AccountProvider(this._api, this._tokens);
+
   UserResponse? user;
-  bool isLoading = false;
-  String? error;
 
   String get displayName =>
       user != null ? '${user!.name} ${user!.lastname}'.trim() : '';
@@ -31,7 +36,7 @@ class AccountProvider extends ChangeNotifier {
 
   Future<void> _fetch() async {
     try {
-      final res = await sl.apiService.getMe();
+      final res = await _api.getMe();
       user = UserResponse.fromJson(res.data);
       error = null;
     } catch (_) {
@@ -40,6 +45,6 @@ class AccountProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await sl.tokenManager.clearData();
+    await _tokens.clearData();
   }
 }

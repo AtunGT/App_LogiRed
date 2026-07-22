@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../domain/repository/register_client_repository.dart';
 import '../../../../core/routes/app_routes.dart';
 import 'register_client_provider.dart';
 
@@ -41,7 +42,7 @@ class _RegisterClientScreenState extends State<RegisterClientScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ChangeNotifierProvider(
-      create: (_) => RegisterClientProvider(),
+      create: (c) => RegisterClientProvider(c.read<RegisterClientRepository>()),
       child: Scaffold(
         backgroundColor: colorScheme.surfaceContainerLow,
         body: SafeArea(

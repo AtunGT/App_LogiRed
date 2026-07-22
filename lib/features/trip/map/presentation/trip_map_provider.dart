@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 
 class TripMapScreen extends StatefulWidget {
@@ -34,7 +35,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   Future<void> _loadTrip() async {
     try {
-      final response = await sl.apiService.getRideById(widget.tripId);
+      final response = await context.read<ApiService>().getRideById(widget.tripId);
       final data = response.data['ride'] ?? response.data;
       if (mounted) {
         setState(() {

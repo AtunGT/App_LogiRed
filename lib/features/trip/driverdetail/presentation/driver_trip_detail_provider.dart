@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
+import '../../../../core/state/view_state.dart';
 
-class DriverTripDetailProvider extends ChangeNotifier {
+class DriverTripDetailProvider extends ChangeNotifier with ViewStateMixin {
+  final ApiService _api;
+
+  DriverTripDetailProvider(this._api);
+
   Trip? trip;
   String clientName = 'Cliente';
   String clientInitial = 'C';
@@ -10,9 +15,7 @@ class DriverTripDetailProvider extends ChangeNotifier {
   String suggestedPrice = '—';
   String price = '';
   String comment = '';
-  bool isLoading = false;
   bool isSending = false;
-  String? error;
   bool proposalSent = false;
 
   void onPriceChange(String v) {
@@ -31,7 +34,7 @@ class DriverTripDetailProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final tripRes = await sl.apiService.getRideById(tripId);
+      final tripRes = await _api.getRideById(tripId);
       final raw = tripRes.data['ride'] ?? tripRes.data;
       trip = Trip.fromJson(raw as Map<String, dynamic>);
 
@@ -50,7 +53,7 @@ class DriverTripDetailProvider extends ChangeNotifier {
         final clientId =
             raw['id_client'] ?? raw['client_id'] ?? raw['idclient'];
         if (clientId != null && clientId != 0) {
-          final clientRes = await sl.apiService.getUserProfile(clientId as int);
+          final clientRes = await _api.getUserProfile(clientId as int);
           final user = UserResponse.fromJson(clientRes.data);
           clientName = '${user.name} ${user.lastname}'.trim();
           if (clientName.trim().isEmpty) clientName = 'Cliente';
@@ -86,7 +89,7 @@ class DriverTripDetailProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await sl.apiService.sendProposal({
+      await _api.sendProposal({
         'id_ride': trip!.id,
         'price': parsed,
         if (comment.trim().isNotEmpty) 'comment': comment.trim(),

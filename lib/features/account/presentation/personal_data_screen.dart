@@ -4,7 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/di/service_locator.dart';
+import 'package:provider/provider.dart';
+import '../../../core/network/api_service.dart';
 import '../../../core/network/model/models.dart';
 
 class PersonalDataScreen extends StatefulWidget {
@@ -43,7 +44,7 @@ class _PersonalDataScreenState extends State<PersonalDataScreen> {
 
   Future<void> _loadUser() async {
     try {
-      final res = await sl.apiService.getMe();
+      final res = await context.read<ApiService>().getMe();
       final user = UserResponse.fromJson(res.data);
       setState(() {
         _user = user;
@@ -83,6 +84,7 @@ class _PersonalDataScreenState extends State<PersonalDataScreen> {
   }
 
   Future<void> _save() async {
+    final api = context.read<ApiService>();
     setState(() => _isSaving = true);
     try {
       final map = <String, dynamic>{
@@ -96,7 +98,7 @@ class _PersonalDataScreenState extends State<PersonalDataScreen> {
           filename: _pickedImage!.name,
         );
       }
-      await sl.apiService.updateUser(FormData.fromMap(map));
+      await api.updateUser(FormData.fromMap(map));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cambios guardados')),

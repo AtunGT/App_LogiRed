@@ -6,7 +6,8 @@ import '../../features/login/registerdriver/presentation/register_driver_screen.
 import '../../features/login/verifyemail/presentation/verify_email_screen.dart';
 import '../../features/roleselection/presentation/role_selection_screen.dart';
 import '../../features/main/client_main_screen.dart';
-import '../../features/main/driver_main_screen.dart';
+import '../../features/driverstatus/presentation/driver_gate.dart';
+import '../../features/driverstatus/presentation/driver_reapply_screen.dart';
 import '../../features/trip/detail/presentation/trip_detail_screen.dart';
 import '../../features/trip/driverdetail/presentation/driver_trip_detail_screen.dart';
 import '../../features/trip/active/presentation/active_trip_screen.dart';
@@ -33,6 +34,7 @@ class AppRoutes {
   static const verifyEmail = '/verify-email';
   static const clientMain = '/client-main';
   static const driverMain = '/driver-main';
+  static const driverReapply = '/driver-reapply';
   static const tripDetail = '/trip-detail';
   static const driverTripDetail = '/driver-trip-detail';
   static const activeTrip = '/active-trip';
@@ -57,7 +59,10 @@ class AppRoutes {
         registerClient: (_) => const RegisterClientScreen(),
         registerDriver: (_) => const RegisterDriverScreen(),
         clientMain: (_) => const ClientMainScreen(),
-        driverMain: (_) => const DriverMainScreen(),
+        // El conductor entra siempre por el gate: es quien decide si ve el mapa
+        // o una pantalla de estado. Nadie debe apuntar a DriverMainScreen.
+        driverMain: (_) => const DriverGate(),
+        driverReapply: (_) => const DriverReapplyScreen(),
         changePassword: (_) => const ChangePasswordScreen(),
         personalData: (_) => const PersonalDataScreen(),
         contact: (_) => const ContactScreen(),

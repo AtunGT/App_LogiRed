@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/network/api_service.dart';
 import 'change_password_provider.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
@@ -31,7 +32,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ChangeNotifierProvider(
-      create: (_) => ChangePasswordProvider(),
+      create: (c) => ChangePasswordProvider(c.read<ApiService>()),
       child: Consumer<ChangePasswordProvider>(
         builder: (context, provider, _) {
           WidgetsBinding.instance.addPostFrameCallback((_) {

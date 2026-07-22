@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/local/token_manager.dart';
+import '../../../../core/state/view_state.dart';
 import '../../../../core/utils/ride_status.dart';
-import '../data/repository/home_repository_impl.dart';
 import '../domain/home_repository.dart';
 
-class HomeProvider extends ChangeNotifier {
-  final HomeRepository _repository = HomeRepositoryImpl();
+class HomeProvider extends ChangeNotifier with ViewStateMixin {
+  final HomeRepository _repository;
+  final TokenManager _tokens;
 
-  bool isLoading = false;
-  String? error;
+  HomeProvider(this._repository, this._tokens);
+
   int totalTrips = 0;
   int pendingTrips = 0;
   int acceptedTrips = 0;
@@ -24,7 +25,7 @@ class HomeProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final userType = await sl.tokenManager.getUserType() ?? 1;
+      final userType = await _tokens.getUserType() ?? 1;
       final trips = userType == 2
           ? await _repository.getDriverTrips()
           : await _repository.getClientTrips();

@@ -1,3 +1,5 @@
+import '../../utils/driver_status.dart';
+
 /// La API devuelve "" en vez de null en campos de imagen; normaliza a null
 /// para que los checks `!= null` de la UI sean suficientes.
 String? _nonEmpty(dynamic v) {
@@ -37,6 +39,14 @@ class UserResponse {
   final double? rating;
   final int? totalTrips;
 
+  /// Siempre uno de los valores de [DriverStatus]; nunca null. Si la API no
+  /// manda el campo se resuelve a `DriverStatus.fallback`.
+  final String driverStatus;
+
+  /// Motivo que escribio administracion al rechazar o bloquear. Solo tiene
+  /// contenido en esos dos estados.
+  final String? rejectReason;
+
   UserResponse({
     required this.iduser,
     required this.name,
@@ -48,6 +58,8 @@ class UserResponse {
     this.imageUrl,
     this.rating,
     this.totalTrips,
+    this.driverStatus = DriverStatus.fallback,
+    this.rejectReason,
   });
 
   factory UserResponse.fromJson(Map<String, dynamic> json) {
@@ -63,6 +75,11 @@ class UserResponse {
       imageUrl: _nonEmpty(d['image_url']),
       rating: (d['rating'] as num?)?.toDouble(),
       totalTrips: (d['total_trips'] as num?)?.toInt(),
+      // Ambos viajan en la raiz de `entities.MyProfile`, no anidados bajo el
+      // bloque de conductor. Si faltaran, DriverStatus.parse degrada al
+      // fallback en vez de romper.
+      driverStatus: DriverStatus.parse(d['driver_status']),
+      rejectReason: _nonEmpty(d['reject_reason']),
     );
   }
 }

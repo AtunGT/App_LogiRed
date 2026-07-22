@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/network/api_service.dart';
 import '../../../core/network/model/models.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/utils/payment_method.dart';
@@ -24,7 +25,7 @@ class _DriverWalletScreenState extends State<DriverWalletScreen> {
   @override
   void initState() {
     super.initState();
-    _provider = DriverWalletProvider()..load();
+    _provider = DriverWalletProvider(context.read<ApiService>())..load();
   }
 
   @override

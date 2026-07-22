@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../domain/repository/register_driver_repository.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/utils/responsive.dart';
 import 'register_driver_provider.dart';
@@ -55,7 +56,7 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ChangeNotifierProvider(
-      create: (_) => RegisterDriverProvider(),
+      create: (c) => RegisterDriverProvider(c.read<RegisterDriverRepository>()),
       child: Scaffold(
         backgroundColor: colorScheme.surfaceContainerLow,
         body: SafeArea(

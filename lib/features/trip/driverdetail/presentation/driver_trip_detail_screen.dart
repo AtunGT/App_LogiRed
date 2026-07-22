@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/utils/payment_method.dart';
 import 'driver_trip_detail_provider.dart';
 
@@ -29,7 +30,7 @@ class _DriverTripDetailScreenState extends State<DriverTripDetailScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ChangeNotifierProvider(
-      create: (_) => DriverTripDetailProvider()..load(widget.tripId),
+      create: (c) => DriverTripDetailProvider(c.read<ApiService>())..load(widget.tripId),
       child: Scaffold(
         backgroundColor: colorScheme.surfaceContainerLow,
         body: Consumer<DriverTripDetailProvider>(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/utils/payment_method.dart';
 import 'trip_detail_provider.dart';
 
@@ -24,7 +25,7 @@ class TripDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => TripDetailProvider()..loadTrip(tripId),
+      create: (c) => TripDetailProvider(c.read<ApiService>())..loadTrip(tripId),
       child: Scaffold(
         appBar: AppBar(title: const Text('Detalle del viaje')),
         body: Consumer<TripDetailProvider>(

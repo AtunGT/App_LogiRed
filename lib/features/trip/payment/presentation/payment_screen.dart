@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/utils/payment_method.dart';
 import '../../../../core/utils/responsive.dart';
@@ -53,7 +54,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Future<void> _checkPaid() async {
     try {
-      final r = await sl.apiService.getRideById(widget.tripId);
+      final r = await context.read<ApiService>().getRideById(widget.tripId);
       final rd = (r.data['ride'] ?? r.data) as Map<String, dynamic>;
       if (!PaymentStatusInfo.isPaid(rd['payment_status'])) return;
       _poll?.cancel();
@@ -64,7 +65,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Future<void> _confirmCash() async {
     setState(() => _confirming = true);
     try {
-      await sl.apiService.confirmCashPayment(widget.tripId);
+      await context.read<ApiService>().confirmCashPayment(widget.tripId);
       if (mounted) setState(() => _paid = true);
     } catch (_) {
       if (mounted) {

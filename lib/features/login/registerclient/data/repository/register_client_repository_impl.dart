@@ -1,11 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import '../../../../../core/di/service_locator.dart';
+import '../../../../../core/network/api_service.dart';
 import '../../domain/model/client_data.dart';
 import '../../domain/repository/register_client_repository.dart';
 
 class RegisterClientRepositoryImpl implements RegisterClientRepository {
+  final ApiService _api;
+
+  RegisterClientRepositoryImpl(this._api);
+
   @override
   Future<void> register(ClientData data) async {
     final formData = FormData.fromMap({
@@ -22,7 +26,7 @@ class RegisterClientRepositoryImpl implements RegisterClientRepository {
     });
 
     try {
-      final response = await sl.apiService.createUser(formData);
+      final response = await _api.createUser(formData);
       if (response.statusCode != 200 && response.statusCode != 201) {
         final msg = _extractMessage(response.data);
         debugPrint('API ERROR ${response.statusCode}: ${response.data}');

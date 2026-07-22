@@ -1,8 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 import '../../../../core/utils/money.dart';
 import '../../../../core/utils/payment_method.dart';
@@ -53,7 +54,7 @@ class _HistoryTripDetailScreenState extends State<HistoryTripDetailScreen> {
 
   Future<void> _load() async {
     try {
-      final res = await sl.apiService.getRideById(widget.trip.id);
+      final res = await context.read<ApiService>().getRideById(widget.trip.id);
       final data = res.data['ride'] ?? res.data;
       _trip = Trip.fromJson(data as Map<String, dynamic>);
     } catch (_) {}

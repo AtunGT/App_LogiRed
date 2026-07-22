@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../data/repository/register_client_repository_impl.dart';
+import '../../../../core/state/view_state.dart';
 import '../domain/model/client_data.dart';
+import '../domain/repository/register_client_repository.dart';
 import '../domain/usecase/register_client_usecase.dart';
 
-class RegisterClientProvider extends ChangeNotifier {
-  final _useCase = RegisterClientUseCase(RegisterClientRepositoryImpl());
+class RegisterClientProvider extends ChangeNotifier with ViewStateMixin {
+  final RegisterClientRepository _repo;
+  late final RegisterClientUseCase _useCase = RegisterClientUseCase(_repo);
+
+  RegisterClientProvider(this._repo);
 
   String name = '';
   String lastname = '';
@@ -16,8 +20,6 @@ class RegisterClientProvider extends ChangeNotifier {
   String password = '';
   String confirmPassword = '';
   String? imagePath;
-  bool isLoading = false;
-  String? error;
   bool registerSuccess = false;
   bool acceptedTerms = false;
   bool acceptedPrivacy = false;

@@ -1,11 +1,15 @@
-import '../../../../../core/di/service_locator.dart';
+import '../../../../../core/network/api_service.dart';
 import '../../../../../core/network/model/models.dart';
 import '../../domain/available_trips_repository.dart';
 
 class AvailableTripsRepositoryImpl implements AvailableTripsRepository {
+  final ApiService _api;
+
+  AvailableTripsRepositoryImpl(this._api);
+
   @override
   Future<List<Trip>> getAvailableTrips(String city) async {
-    final response = await sl.apiService.getAvailableTrips();
+    final response = await _api.getAvailableTrips();
     final data = response.data;
     List<dynamic> list;
     if (data is List) {
@@ -21,6 +25,6 @@ class AvailableTripsRepositoryImpl implements AvailableTripsRepository {
 
   @override
   Future<void> acceptTrip(int tripId) async {
-    await sl.apiService.acceptTrip(tripId);
+    await _api.acceptTrip(tripId);
   }
 }

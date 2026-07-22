@@ -2,17 +2,23 @@ import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/local/token_manager.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../domain/model/login_result.dart';
 import '../../domain/repository/login_repository.dart';
 
 class LoginRepositoryImpl implements LoginRepository {
+  final ApiService _api;
+  final TokenManager _tokens;
+
+  LoginRepositoryImpl(this._api, this._tokens);
+
   @override
   Future<LoginResult> login(String email, String password) async {
     try {
-      final response = await sl.apiService.login(
+      final response = await _api.login(
         LoginRequest(email: email, password: password).toJson(),
       );
 
@@ -50,7 +56,7 @@ class LoginRepositoryImpl implements LoginRepository {
                 'Debes verificar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.');
       }
 
-      await sl.tokenManager.saveAuthData(
+      await _tokens.saveAuthData(
         token: token,
         userType: userType,
         userId: userId,
@@ -77,6 +83,7 @@ class LoginRepositoryImpl implements LoginRepository {
     }
   }
 
+  @override
   Future<LoginResult> loginWithGoogle() async {
     try {
       final googleUser = await GoogleSignIn(
@@ -95,7 +102,7 @@ class LoginRepositoryImpl implements LoginRepository {
           await FirebaseAuth.instance.signInWithCredential(credential);
       final idToken = await userCredential.user?.getIdToken() ?? '';
 
-      final response = await sl.apiService.loginWithGoogle(idToken);
+      final response = await _api.loginWithGoogle(idToken);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         final msg = response.data['message']?.toString() ??
@@ -117,7 +124,7 @@ class LoginRepositoryImpl implements LoginRepository {
       final userId = decoded['iduser'] ?? 0;
       final cityWork = decoded['citywork'] ?? '';
 
-      await sl.tokenManager.saveAuthData(
+      await _tokens.saveAuthData(
         token: token,
         userType: userType,
         userId: userId,

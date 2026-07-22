@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/network/api_service.dart';
 import '../../../core/network/model/models.dart';
 import 'car_provider.dart';
 
@@ -26,7 +27,7 @@ class _CarScreenState extends State<CarScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ChangeNotifierProvider(
-      create: (_) => CarProvider()..loadCars(),
+      create: (c) => CarProvider(c.read<ApiService>())..loadCars(),
       child: Consumer<CarProvider>(
         builder: (context, provider, _) {
           return Scaffold(

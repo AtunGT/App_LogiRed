@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:screen_protector/screen_protector.dart';
 import '../../../../core/utils/responsive.dart';
 import '../domain/model/login_result.dart';
+import '../domain/repository/login_repository.dart';
 import 'login_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -53,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ChangeNotifierProvider(
-      create: (_) => LoginProvider(),
+      create: (c) => LoginProvider(c.read<LoginRepository>()),
       child: Scaffold(
         backgroundColor: colorScheme.surfaceContainerLow,
         body: SafeArea(

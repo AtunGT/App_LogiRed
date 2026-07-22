@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
+import '../../../../core/state/view_state.dart';
 
-class ActiveTripProvider extends ChangeNotifier {
+class ActiveTripProvider extends ChangeNotifier with ViewStateMixin {
+  final ApiService _api;
+
+  ActiveTripProvider(this._api);
+
   Trip? trip;
-  bool isLoading = false;
-  String? error;
   bool isDriver = false;
   double proposalPrice = 0;
 
@@ -21,14 +24,14 @@ class ActiveTripProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await sl.apiService.getRideById(tripId);
+      final response = await _api.getRideById(tripId);
       final data = response.data['ride'] ?? response.data;
       trip = Trip.fromJson(data);
 
       final profileId = isDriver ? trip!.clientId : (trip!.driverId ?? 0);
       if (profileId > 0) {
         try {
-          final profileRes = await sl.apiService.getUserProfile(profileId);
+          final profileRes = await _api.getUserProfile(profileId);
           final user = UserResponse.fromJson(profileRes.data);
           personName = '${user.name} ${user.lastname}'.trim();
           personInitial =
@@ -48,7 +51,7 @@ class ActiveTripProvider extends ChangeNotifier {
   Future<bool> updateStatus(int status) async {
     if (trip == null) return false;
     try {
-      await sl.apiService.updateRideStatus(
+      await _api.updateRideStatus(
         trip!.id,
         UpdateStatusRequest(status: status).toJson(),
       );

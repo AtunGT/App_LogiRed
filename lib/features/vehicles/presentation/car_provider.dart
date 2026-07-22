@@ -1,14 +1,17 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/di/service_locator.dart';
+import '../../../core/network/api_service.dart';
 import '../../../core/network/model/models.dart';
+import '../../../core/state/view_state.dart';
 
-class CarProvider extends ChangeNotifier {
+class CarProvider extends ChangeNotifier with ViewStateMixin {
+  final ApiService _api;
+
+  CarProvider(this._api);
+
   List<Car> cars = [];
-  bool isLoading = false;
   bool isSaving = false;
-  String? error;
 
   final carRegistrationCtrl = TextEditingController();
   final brandCtrl = TextEditingController();
@@ -27,7 +30,7 @@ class CarProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await sl.apiService.getMyCars();
+      final response = await _api.getMyCars();
       final list = response.data['cars'] as List? ?? [];
       cars = list.map((e) => Car.fromJson(e)).toList();
     } catch (e) {
@@ -81,9 +84,9 @@ class CarProvider extends ChangeNotifier {
       });
 
       if (carId != null) {
-        await sl.apiService.updateCar(carId, formData);
+        await _api.updateCar(carId, formData);
       } else {
-        await sl.apiService.createCar(formData);
+        await _api.createCar(formData);
       }
 
       _clearForm();
@@ -98,7 +101,7 @@ class CarProvider extends ChangeNotifier {
 
   Future<void> deleteCar(int carId) async {
     try {
-      await sl.apiService.deleteCar(carId);
+      await _api.deleteCar(carId);
       cars.removeWhere((c) => c.id == carId);
       notifyListeners();
     } catch (e) {

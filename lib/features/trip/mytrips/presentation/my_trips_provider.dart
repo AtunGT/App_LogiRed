@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../../../core/network/model/models.dart';
-import '../data/repository/my_trips_repository_impl.dart';
+import '../../../../core/state/view_state.dart';
 import '../domain/my_trips_repository.dart';
 
-class MyTripsProvider extends ChangeNotifier {
-  final MyTripsRepository _repository = MyTripsRepositoryImpl();
+class MyTripsProvider extends ChangeNotifier with ViewStateMixin {
+  final MyTripsRepository _repository;
+
+  MyTripsProvider(this._repository);
 
   List<Trip> trips = [];
-  bool isLoading = false;
-  String? error;
 
   Future<void> loadTrips() async {
     isLoading = true;

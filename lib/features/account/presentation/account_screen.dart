@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/local/token_manager.dart';
+import '../../../core/network/api_service.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/theme_provider.dart';
 import 'account_provider.dart';
@@ -19,7 +21,8 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   void initState() {
     super.initState();
-    _provider = AccountProvider()..loadUser();
+    _provider = AccountProvider(context.read<ApiService>(), context.read<TokenManager>())
+      ..loadUser();
   }
 
   @override

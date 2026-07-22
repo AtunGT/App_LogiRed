@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 import '../../../../core/utils/payment_method.dart';
 import '../../rating/presentation/rate_driver_screen.dart';
@@ -82,7 +83,7 @@ class _ClientPaymentScreenState extends State<ClientPaymentScreen> {
     });
 
     try {
-      final res = await sl.apiService.createPaymentIntent({
+      final res = await context.read<ApiService>().createPaymentIntent({
         'amount': widget.proposal.price,
         'currency': 'mxn',
         'ride_id': widget.trip.id,

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import '../../../core/di/service_locator.dart';
+import 'package:provider/provider.dart';
+import '../../../core/network/api_service.dart';
 import '../../../core/network/model/models.dart';
 
 class ContactScreen extends StatefulWidget {
@@ -22,7 +23,7 @@ class _ContactScreenState extends State<ContactScreen> {
 
   Future<void> _loadUser() async {
     try {
-      final res = await sl.apiService.getMe();
+      final res = await context.read<ApiService>().getMe();
       setState(() {
         _user = UserResponse.fromJson(res.data);
         _isLoading = false;
@@ -38,6 +39,7 @@ class _ContactScreenState extends State<ContactScreen> {
     required String apiKey,
     required TextInputType keyboardType,
   }) async {
+    final api = context.read<ApiService>();
     final ctrl = TextEditingController(text: current);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -74,7 +76,7 @@ class _ContactScreenState extends State<ContactScreen> {
     if (confirmed != true) return;
 
     try {
-      await sl.apiService.updateUser(
+      await api.updateUser(
         FormData.fromMap({apiKey: ctrl.text.trim()}),
       );
       await _loadUser();

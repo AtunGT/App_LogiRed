@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../domain/trip_history_repository.dart';
+import '../../../../core/local/token_manager.dart';
 import '../../../../core/network/model/models.dart';
 import '../../../../core/utils/money.dart';
 import '../../../../core/utils/ride_status.dart';
@@ -14,7 +16,7 @@ class TripHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => TripHistoryProvider()..loadHistory(),
+      create: (c) => TripHistoryProvider(c.read<TripHistoryRepository>(), c.read<TokenManager>())..loadHistory(),
       child: _HistoryBody(showBackButton: showBackButton),
     );
   }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 import '../../../../core/utils/payment_method.dart';
 import '../../../../core/utils/ride_status.dart';
@@ -21,7 +21,7 @@ class AcceptedTripsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => AcceptedTripsProvider()..loadTrips(),
+      create: (c) => AcceptedTripsProvider(c.read<ApiService>())..loadTrips(),
       child: Consumer<AcceptedTripsProvider>(
         builder: (context, provider, _) {
           final colorScheme = Theme.of(context).colorScheme;
@@ -153,9 +153,10 @@ class AcceptedTripsScreen extends StatelessWidget {
 
   Future<void> _openActive(BuildContext context, AcceptedTripsProvider provider,
       DriverProposalItem item, bool start) async {
+    final api = context.read<ApiService>();
     if (start) {
       try {
-        await sl.apiService.updateRideStatus(
+        await api.updateRideStatus(
             item.idRide, UpdateStatusRequest(status: 2).toJson());
       } catch (_) {}
     }

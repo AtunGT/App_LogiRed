@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
+import '../../../../core/state/view_state.dart';
 import '../proposal_enrichment.dart';
 
-class TripProposalsProvider extends ChangeNotifier {
+class TripProposalsProvider extends ChangeNotifier with ViewStateMixin {
+  final ApiService _api;
+
+  TripProposalsProvider(this._api);
+
   List<Proposal> proposals = [];
-  bool isLoading = false;
-  String? error;
   bool accepting = false;
 
   Future<void> loadProposals(int tripId) async {
@@ -15,7 +18,7 @@ class TripProposalsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await sl.apiService.getProposalsByRide(tripId);
+      final response = await _api.getProposalsByRide(tripId);
       final data = response.data;
       final list = data is List
           ? data
@@ -38,7 +41,7 @@ class TripProposalsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await sl.apiService.updateProposalStatus(
+      await _api.updateProposalStatus(
         proposalId,
         ProposalStatusRequest(idstatus: 1).toJson(),
       );

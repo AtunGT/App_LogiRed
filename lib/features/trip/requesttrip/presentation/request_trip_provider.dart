@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
+import '../../../../core/state/view_state.dart';
 
-class RequestTripProvider extends ChangeNotifier {
+class RequestTripProvider extends ChangeNotifier with ViewStateMixin {
+  final ApiService _api;
+
+  RequestTripProvider(this._api);
+
   String origin = '';
   String destination = '';
   double originLat = 0;
@@ -18,9 +23,7 @@ class RequestTripProvider extends ChangeNotifier {
   String approxWeight = '';
   String description = '';
   int paymentMethod = 1;
-  bool isLoading = false;
   bool isLocating = false;
-  String? error;
   bool success = false;
 
   void onDateChange(String v) {
@@ -131,7 +134,7 @@ class RequestTripProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await sl.apiService.createTrip(TripRequest(
+      await _api.createTrip(TripRequest(
         origin: origin,
         originLat: originLat,
         originLng: originLng,

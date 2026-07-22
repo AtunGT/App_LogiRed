@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../trip/home/domain/home_repository.dart';
+import '../../core/network/api_service.dart';
+import '../../core/local/token_manager.dart';
 import '../../core/utils/responsive.dart';
 import '../../core/widgets/scrollable_nav_rail.dart';
 import '../phone_verification/presentation/phone_verification_banner.dart';
@@ -67,8 +70,8 @@ class _ClientMainScreenState extends State<ClientMainScreen> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-            create: (_) => PhoneVerificationProvider()..init()),
-        ChangeNotifierProvider(create: (_) => HomeProvider()),
+            create: (c) => PhoneVerificationProvider(c.read<ApiService>(), c.read<TokenManager>())..init()),
+        ChangeNotifierProvider(create: (c) => HomeProvider(c.read<HomeRepository>(), c.read<TokenManager>())),
       ],
       child: Builder(builder: (ctx) {
         if (useRail) {

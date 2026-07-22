@@ -4,6 +4,7 @@ import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/network/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'map_picker_screen.dart';
 import 'request_trip_provider.dart';
@@ -141,7 +142,7 @@ class _RequestTripScreenState extends State<RequestTripScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ChangeNotifierProvider(
-      create: (_) => RequestTripProvider(),
+      create: (c) => RequestTripProvider(c.read<ApiService>()),
       child: Consumer<RequestTripProvider>(
         builder: (context, provider, _) {
           WidgetsBinding.instance.addPostFrameCallback((_) {

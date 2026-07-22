@@ -1,11 +1,17 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../../core/di/service_locator.dart';
+import '../../../core/local/token_manager.dart';
+import '../../../core/network/api_service.dart';
 import '../../../core/network/model/models.dart';
 
 enum PhoneVerifState { idle, sending, codeSent, verifying, verified }
 
 class PhoneVerificationProvider extends ChangeNotifier {
+  final ApiService _api;
+  final TokenManager _tokens;
+
+  PhoneVerificationProvider(this._api, this._tokens);
+
   PhoneVerifState _state = PhoneVerifState.idle;
   bool _dismissed = false;
   String? _error;
@@ -22,14 +28,14 @@ class PhoneVerificationProvider extends ChangeNotifier {
   }
 
   Future<void> init() async {
-    final verified = await sl.tokenManager.isPhoneVerified();
+    final verified = await _tokens.isPhoneVerified();
     if (verified) {
       _state = PhoneVerifState.verified;
       notifyListeners();
       return;
     }
     try {
-      final res = await sl.apiService.getMe();
+      final res = await _api.getMe();
       final user = UserResponse.fromJson(res.data);
       _phoneNumber = user.numberPhone;
     } catch (_) {}
@@ -109,7 +115,7 @@ class PhoneVerificationProvider extends ChangeNotifier {
         rethrow;
       }
     }
-    await sl.tokenManager.setPhoneVerified(true);
+    await _tokens.setPhoneVerified(true);
     _state = PhoneVerifState.verified;
     notifyListeners();
   }

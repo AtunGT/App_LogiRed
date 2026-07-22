@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/utils/responsive.dart';
 import 'rate_driver_provider.dart';
@@ -41,7 +42,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => RateDriverProvider(),
+      create: (c) => RateDriverProvider(c.read<ApiService>()),
       child: Consumer<RateDriverProvider>(
         builder: (context, provider, _) {
           final colorScheme = Theme.of(context).colorScheme;

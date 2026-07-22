@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/di/service_locator.dart';
+import '../domain/my_trips_repository.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 import '../../../../core/utils/payment_method.dart';
 import '../../../../core/utils/ride_status.dart';
@@ -20,7 +21,7 @@ class MyTripsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => MyTripsProvider()..loadTrips(),
+      create: (c) => MyTripsProvider(c.read<MyTripsRepository>())..loadTrips(),
       child: const _MyTripsBody(),
     );
   }
@@ -519,7 +520,8 @@ class _ProposalBadgeState extends State<_ProposalBadge> {
 
   Future<void> _load() async {
     try {
-      final response = await sl.apiService.getProposalsByRide(widget.trip.id);
+      final response =
+          await context.read<ApiService>().getProposalsByRide(widget.trip.id);
       final d1 = response.data;
       final list = d1 is List
           ? d1
@@ -590,7 +592,8 @@ class _ProposalsSectionState extends State<_ProposalsSection> {
 
   Future<void> _load() async {
     try {
-      final response = await sl.apiService.getProposalsByRide(widget.trip.id);
+      final response =
+          await context.read<ApiService>().getProposalsByRide(widget.trip.id);
       final d2 = response.data;
       final list2 = d2 is List
           ? d2

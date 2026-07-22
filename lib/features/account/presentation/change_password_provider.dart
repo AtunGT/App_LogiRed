@@ -1,14 +1,17 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../../core/di/service_locator.dart';
+import '../../../core/network/api_service.dart';
 import '../../../core/network/model/models.dart';
+import '../../../core/state/view_state.dart';
 
-class ChangePasswordProvider extends ChangeNotifier {
+class ChangePasswordProvider extends ChangeNotifier with ViewStateMixin {
+  final ApiService _api;
+
+  ChangePasswordProvider(this._api);
+
   String oldPassword = '';
   String newPassword = '';
   String confirmPassword = '';
-  bool isLoading = false;
-  String? error;
   bool success = false;
 
   void onOldChange(String v) {
@@ -58,7 +61,7 @@ class ChangePasswordProvider extends ChangeNotifier {
         await firebaseUser.updatePassword(newPassword);
       }
 
-      await sl.apiService.updatePassword(
+      await _api.updatePassword(
         UpdatePasswordRequest(
           oldPassword: oldPassword,
           newPassword: newPassword,

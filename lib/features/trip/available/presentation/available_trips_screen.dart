@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../domain/available_trips_repository.dart';
+import '../../../../core/network/api_service.dart';
+import '../../../../core/local/token_manager.dart';
 import '../../../../core/network/model/models.dart';
 import '../../../../core/utils/payment_method.dart';
 import '../../../../core/utils/responsive.dart';
@@ -12,7 +15,7 @@ class AvailableTripsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => AvailableTripsProvider()..loadCityAndSearch(),
+      create: (c) => AvailableTripsProvider(c.read<AvailableTripsRepository>(), c.read<ApiService>(), c.read<TokenManager>())..loadCityAndSearch(),
       child: Consumer<AvailableTripsProvider>(
         builder: (context, provider, _) {
           final colorScheme = Theme.of(context).colorScheme;

@@ -9,7 +9,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/local/token_manager.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/utils/car_marker.dart';
 import '../../../../core/utils/directions.dart';
 import '../../../../core/utils/payment_method.dart';
@@ -55,7 +56,7 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ActiveTripProvider()
+      create: (c) => ActiveTripProvider(c.read<ApiService>())
         ..load(widget.tripId, widget.isDriver, widget.proposalPrice),
       child: Consumer<ActiveTripProvider>(
         builder: (context, provider, _) {
@@ -216,7 +217,7 @@ class _NavBodyState extends State<_NavBody> {
 
   Future<void> _connectPublish() async {
     if (_publishing) return;
-    final token = await sl.tokenManager.getToken();
+    final token = await context.read<TokenManager>().getToken();
     if (token == null || token.isEmpty) return;
     final id = widget.provider.trip!.id;
     _locWs.connect('wss://api-logired.shop/ws/rides/$id/publish?token=$token');

@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import '../data/repository/login_repository_impl.dart';
+import '../../../core/state/view_state.dart';
 import '../domain/model/login_result.dart';
+import '../domain/repository/login_repository.dart';
 import '../domain/usecase/login_usecase.dart';
 
-class LoginProvider extends ChangeNotifier {
-  final _repo = LoginRepositoryImpl();
-  late final _useCase = LoginUseCase(_repo);
+class LoginProvider extends ChangeNotifier with ViewStateMixin {
+  final LoginRepository _repo;
+  late final LoginUseCase _useCase = LoginUseCase(_repo);
+
+  LoginProvider(this._repo);
 
   String email = '';
   String password = '';
-  bool isLoading = false;
   bool isGoogleLoading = false;
-  String? error;
   LoginResult? result;
 
   void onEmailChange(String val) {

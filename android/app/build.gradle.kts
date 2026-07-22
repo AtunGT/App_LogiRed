@@ -34,7 +34,9 @@ android {
 
     defaultConfig {
         applicationId = "com.arthur.gloria.alhan.logired"
-        minSdk = flutter.minSdkVersion
+        // Piso fijado a proposito en API 24 (Android 7.0): no heredar el default de
+        // Flutter, que puede subir al actualizar el SDK y recortar dispositivos sin aviso.
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

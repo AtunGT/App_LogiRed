@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
+import '../../../../core/state/view_state.dart';
 
-class TripDetailProvider extends ChangeNotifier {
+class TripDetailProvider extends ChangeNotifier with ViewStateMixin {
+  final ApiService _api;
+
+  TripDetailProvider(this._api);
+
   Trip? trip;
-  bool isLoading = false;
-  String? error;
 
   Future<void> loadTrip(int tripId) async {
     isLoading = true;
@@ -13,7 +16,7 @@ class TripDetailProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await sl.apiService.getRideById(tripId);
+      final response = await _api.getRideById(tripId);
       final data = response.data['ride'] ?? response.data;
       trip = Trip.fromJson(data);
     } catch (e) {

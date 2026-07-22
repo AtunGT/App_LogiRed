@@ -5,9 +5,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/local/token_manager.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
-import '../../../../core/di/service_locator.dart';
 import '../../../../core/utils/car_marker.dart';
 import '../../../../core/utils/directions.dart';
 import '../../../../core/utils/payment_method.dart';
@@ -96,7 +98,7 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
   }
 
   Future<void> _subscribeDriverLocation() async {
-    final token = await sl.tokenManager.getToken();
+    final token = await context.read<TokenManager>().getToken();
     if (token == null || token.isEmpty) return;
     _ws.onMessage = (msg) {
       try {
@@ -144,7 +146,8 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
 
   Future<void> _loadAcceptedProposal() async {
     try {
-      final response = await sl.apiService.getProposalsByRide(widget.trip.id);
+      final response =
+          await context.read<ApiService>().getProposalsByRide(widget.trip.id);
       final list = (response.data['proposals'] as List? ?? [])
           .map((e) => Proposal.fromJson(e))
           .toList();
@@ -261,7 +264,7 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
 
   Future<void> _refreshStatus() async {
     try {
-      final r = await sl.apiService.getRideById(widget.trip.id);
+      final r = await context.read<ApiService>().getRideById(widget.trip.id);
       final rd = (r.data['ride'] ?? r.data) as Map<String, dynamic>;
       final s = (rd['idstatus'] ?? rd['status']) as int?;
       if (s == null || s == _rideStatus || !mounted) return;

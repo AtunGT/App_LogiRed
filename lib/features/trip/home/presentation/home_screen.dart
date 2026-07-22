@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 import '../../../../core/utils/ride_status.dart';
 import '../../../../core/utils/trip_schedule.dart';
@@ -44,15 +45,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadProposalCount() async {
     try {
-      final res = await sl.apiService.getMyAcceptedTrips();
+      final res = await context.read<ApiService>().getMyAcceptedTrips();
       final list = (res.data['rides'] ?? res.data) as List? ?? [];
       if (mounted) setState(() => _proposalCount = list.length);
     } catch (_) {}
   }
 
   Future<void> _loadActionableProposal() async {
+    final api = context.read<ApiService>();
     try {
-      final res = await sl.apiService.getMyProposals();
+      final res = await api.getMyProposals();
       final list = (res.data['proposals'] ?? res.data) as List? ?? [];
       for (final p in list) {
         final proposalStatus =
@@ -63,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (idRide == 0) continue;
 
         try {
-          final r = await sl.apiService.getRideById(idRide);
+          final r = await api.getRideById(idRide);
           final rd = (r.data['ride'] ?? r.data) as Map<String, dynamic>;
           final trip = Trip.fromJson(rd);
 
@@ -92,9 +94,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openActive(BuildContext context, _QuickProposal p) async {
     final starting = !RideStatus.isInCourse(p.rideStatus);
+    final api = context.read<ApiService>();
     if (starting) {
       try {
-        await sl.apiService.updateRideStatus(
+        await api.updateRideStatus(
             p.idRide, UpdateStatusRequest(status: 2).toJson());
       } catch (_) {}
     }

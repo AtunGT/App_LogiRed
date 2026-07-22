@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../data/repository/register_driver_repository_impl.dart';
+import '../../../../core/state/view_state.dart';
 import '../domain/model/driver_data.dart';
+import '../domain/repository/register_driver_repository.dart';
 import '../domain/usecase/register_driver_usecase.dart';
 
-class RegisterDriverProvider extends ChangeNotifier {
-  final _useCase = RegisterDriverUseCase(RegisterDriverRepositoryImpl());
+class RegisterDriverProvider extends ChangeNotifier with ViewStateMixin {
+  final RegisterDriverRepository _repo;
+  late final RegisterDriverUseCase _useCase = RegisterDriverUseCase(_repo);
   final _picker = ImagePicker();
+
+  RegisterDriverProvider(this._repo);
 
   int currentStep = 0;
 
@@ -35,8 +39,6 @@ class RegisterDriverProvider extends ChangeNotifier {
   String? imgCargoSpace;
   String? imgVehiclePlate;
 
-  bool isLoading = false;
-  String? error;
   bool registerSuccess = false;
   String registeredEmail = '';
   bool acceptedTerms = false;

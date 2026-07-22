@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 import '../proposal_enrichment.dart';
 
@@ -364,7 +365,7 @@ class _AcceptButtonState extends State<_AcceptButton> {
   Future<void> _accept() async {
     setState(() => _loading = true);
     try {
-      await sl.apiService.updateProposalStatus(
+      await context.read<ApiService>().updateProposalStatus(
         widget.proposal.id,
         ProposalStatusRequest(idstatus: 1).toJson(),
       );

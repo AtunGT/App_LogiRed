@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 import '../../../../core/utils/payment_method.dart';
 import '../../rating/presentation/rate_driver_screen.dart';
@@ -42,7 +43,7 @@ class _CashPaymentWaitScreenState extends State<CashPaymentWaitScreen> {
 
   Future<void> _check() async {
     try {
-      final r = await sl.apiService.getRideById(widget.trip.id);
+      final r = await context.read<ApiService>().getRideById(widget.trip.id);
       final rd = (r.data['ride'] ?? r.data) as Map<String, dynamic>;
       if (!PaymentStatusInfo.isPaid(rd['payment_status'])) return;
       _poll?.cancel();

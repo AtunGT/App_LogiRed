@@ -1,11 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import '../../../../../core/di/service_locator.dart';
+import '../../../../../core/network/api_service.dart';
 import '../../domain/model/driver_data.dart';
 import '../../domain/repository/register_driver_repository.dart';
 
 class RegisterDriverRepositoryImpl implements RegisterDriverRepository {
+  final ApiService _api;
+
+  RegisterDriverRepositoryImpl(this._api);
+
   @override
   Future<void> register(DriverData data) async {
     final map = <String, dynamic>{
@@ -55,7 +59,7 @@ class RegisterDriverRepositoryImpl implements RegisterDriverRepository {
     final formData = FormData.fromMap(map);
 
     try {
-      final response = await sl.apiService.createUser(formData);
+      final response = await _api.createUser(formData);
       if (response.statusCode != 200 && response.statusCode != 201) {
         final msg = _extractMessage(response.data);
         debugPrint('API ERROR ${response.statusCode}: ${response.data}');

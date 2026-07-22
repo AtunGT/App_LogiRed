@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 import 'trip_proposals_provider.dart';
 
@@ -10,7 +11,7 @@ class TripProposalsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => TripProposalsProvider()..loadProposals(tripId),
+      create: (c) => TripProposalsProvider(c.read<ApiService>())..loadProposals(tripId),
       child: Scaffold(
         appBar: AppBar(title: const Text('Propuestas')),
         body: Consumer<TripProposalsProvider>(

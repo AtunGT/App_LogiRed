@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/network/api_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   final void Function(int index) onNavigate;
@@ -20,7 +21,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadProposalCount() async {
     try {
-      final res = await sl.apiService.getMyAcceptedTrips();
+      final res = await context.read<ApiService>().getMyAcceptedTrips();
       final list = (res.data['rides'] ?? res.data) as List? ?? [];
       if (mounted) setState(() => _proposalCount = list.length);
     } catch (_) {}

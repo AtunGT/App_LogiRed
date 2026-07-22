@@ -12,11 +12,34 @@ const _primaryColor = Color(0xFF1D6B50);
 
 final _localNotif = FlutterLocalNotificationsPlugin();
 
+/// Tipos de push con los que administracion avisa un cambio de estado del
+/// conductor. Llegan en `data['type']` junto con `reason` en los dos ultimos.
+const _driverStatusTypes = {
+  'driver_approved',
+  'driver_rejected',
+  'driver_blocked',
+};
+
 class NotificationService {
   static final _fcm = FirebaseMessaging.instance;
   static GlobalKey<NavigatorState>? _navKey;
   static StreamSubscription<String>? _tokenRefreshSub;
   static String? _pendingRoute;
+
+  /// Se incrementa cada vez que llega un push de cambio de estado del
+  /// conductor. `DriverGate` lo escucha para releer `GET /users/me` y cambiar
+  /// de pantalla sin que el usuario tenga que reiniciar la app.
+  ///
+  /// Se notifica el evento, no el estado: el push no es fuente de verdad, solo
+  /// la señal de que hay que volver a preguntarle a la API.
+  static final ValueNotifier<int> driverStatusRevision = ValueNotifier<int>(0);
+
+  static void _checkDriverStatusChange(RemoteMessage msg) {
+    final type = msg.data['type']?.toString();
+    if (type != null && _driverStatusTypes.contains(type)) {
+      driverStatusRevision.value++;
+    }
+  }
 
   static Future<void> init(GlobalKey<NavigatorState> navKey) async {
     _navKey = navKey;
@@ -55,7 +78,10 @@ class NotificationService {
           showBadge: true,
         ));
 
-    FirebaseMessaging.onMessage.listen(_showLocal);
+    FirebaseMessaging.onMessage.listen((msg) {
+      _checkDriverStatusChange(msg);
+      _showLocal(msg);
+    });
 
     FirebaseMessaging.onMessageOpenedApp.listen(_onRemoteTap);
 
@@ -170,8 +196,12 @@ class NotificationService {
 
   static void _onLocalTap(NotificationResponse r) => _navigate(r.payload);
 
-  static void _onRemoteTap(RemoteMessage msg) =>
-      _navigate(msg.data['route'] as String?);
+  static void _onRemoteTap(RemoteMessage msg) {
+    // Abrir la app desde el push tambien cuenta como señal: el estado pudo
+    // cambiar mientras estaba cerrada.
+    _checkDriverStatusChange(msg);
+    _navigate(msg.data['route'] as String?);
+  }
 
   static void _navigate(String? route) {
     if (route == null || route.isEmpty) return;

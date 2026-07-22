@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
+import '../../../../core/state/view_state.dart';
 import '../../../../core/utils/ride_status.dart';
 
 enum ProposalFilter { pending, accepted, inProgress }
@@ -17,14 +18,14 @@ bool _rideInProgress(DriverProposalItem p) =>
 bool _rideClosed(DriverProposalItem p) =>
     p.rideLoaded && RideStatus.isClosed(p.rideStatus);
 
-class AcceptedTripsProvider extends ChangeNotifier {
+class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
+  final ApiService _api;
+
   List<DriverProposalItem> _all = [];
   ProposalFilter filter = ProposalFilter.pending;
-  bool isLoading = false;
-  String? error;
   Timer? _refreshTimer;
 
-  AcceptedTripsProvider() {
+  AcceptedTripsProvider(this._api) {
     // Refresco silencioso para que los estados (Reservado → En curso →
     // finalizado) se actualicen solos sin que el conductor recargue.
     _refreshTimer = Timer.periodic(
@@ -81,7 +82,7 @@ class AcceptedTripsProvider extends ChangeNotifier {
     }
 
     try {
-      final res = await sl.apiService.getMyProposals();
+      final res = await _api.getMyProposals();
       final list = (res.data['proposals'] ?? res.data) as List? ?? [];
       final assignedRides = await _loadAssignedRides();
       _all = await Future.wait(list.map(
@@ -101,7 +102,7 @@ class AcceptedTripsProvider extends ChangeNotifier {
   /// GET /rides/{id} por viaje.
   Future<Map<int, Trip>> _loadAssignedRides() async {
     try {
-      final res = await sl.apiService.getMyAcceptedTrips();
+      final res = await _api.getMyAcceptedTrips();
       final list = res.data['rides'] as List? ?? [];
       return {
         for (final t
@@ -121,7 +122,7 @@ class AcceptedTripsProvider extends ChangeNotifier {
     Trip? trip = assignedRides[idRide];
     if (trip == null && idRide != 0) {
       try {
-        final r = await sl.apiService.getRideById(idRide);
+        final r = await _api.getRideById(idRide);
         final rd = (r.data['ride'] ?? r.data) as Map<String, dynamic>;
         trip = Trip.fromJson(rd);
       } catch (e) {
@@ -133,7 +134,7 @@ class AcceptedTripsProvider extends ChangeNotifier {
     final clientId = trip?.clientId ?? 0;
     if (clientId != 0) {
       try {
-        final c = await sl.apiService.getUserProfile(clientId);
+        final c = await _api.getUserProfile(clientId);
         final cd = (c.data['data'] ?? c.data) as Map<String, dynamic>;
         final n = '${cd['name'] ?? ''} ${cd['lastname'] ?? ''}'.trim();
         if (n.isNotEmpty) clientName = n;

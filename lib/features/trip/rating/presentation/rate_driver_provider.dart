@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
-import '../../../../core/di/service_locator.dart';
+import '../../../../core/network/api_service.dart';
+import '../../../../core/state/view_state.dart';
 
-class RateDriverProvider extends ChangeNotifier {
+class RateDriverProvider extends ChangeNotifier with ViewStateMixin {
+  final ApiService _api;
+
+  RateDriverProvider(this._api);
+
   int _stars = 0;
   String _comment = '';
   final Set<String> _selectedTags = {};
-  bool _isSending = false;
   bool _sent = false;
-  String? _error;
 
   int get stars => _stars;
   String get comment => _comment;
   Set<String> get selectedTags => _selectedTags;
-  bool get isSending => _isSending;
+  bool get isSending => isLoading;
   bool get sent => _sent;
-  String? get error => _error;
 
   static const List<String> tags = [
     'Puntual',
@@ -53,12 +55,12 @@ class RateDriverProvider extends ChangeNotifier {
 
   Future<void> send(int driverId) async {
     if (_stars == 0) {
-      _error = 'Selecciona una calificación';
+      error = 'Selecciona una calificación';
       notifyListeners();
       return;
     }
-    _isSending = true;
-    _error = null;
+    isLoading = true;
+    error = null;
     notifyListeners();
 
     try {
@@ -69,16 +71,16 @@ class RateDriverProvider extends ChangeNotifier {
 
       // POST /reviews no liga la reseña al viaje: el pasajero sale del token
       // y el conductor va en `iduser` (así lo nombra el backend).
-      await sl.apiService.createReview({
+      await _api.createReview({
         'iduser': driverId,
         'rating': _stars,
         if (comment.isNotEmpty) 'review': comment,
       });
       _sent = true;
     } catch (e) {
-      _error = 'No se pudo enviar la calificación';
+      error = 'No se pudo enviar la calificación';
     } finally {
-      _isSending = false;
+      isLoading = false;
       notifyListeners();
     }
   }

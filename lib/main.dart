@@ -9,7 +9,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'core/config/stripe_config.dart';
+import 'core/di/app_providers.dart';
 import 'core/di/service_locator.dart';
+import 'core/local/token_manager.dart';
 import 'core/routes/app_routes.dart';
 import 'core/security/mock_location_guard.dart';
 import 'core/theme/material_theme.dart';
@@ -41,8 +43,8 @@ void main() async {
   await NotificationService.init(navigatorKey);
   sl.init();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    MultiProvider(
+      providers: appProviders,
       child: const LogiRedApp(),
     ),
   );
@@ -93,9 +95,10 @@ class _AppStartupState extends State<AppStartup> {
   }
 
   Future<void> _checkAuth() async {
+    final tokens = context.read<TokenManager>();
     await Permission.notification.request();
-    final token = await sl.tokenManager.getToken();
-    final userType = await sl.tokenManager.getUserType();
+    final token = await tokens.getToken();
+    final userType = await tokens.getUserType();
     if (!mounted) return;
     if (token != null && token.isNotEmpty) {
       await NotificationService.registerDeviceToken();
