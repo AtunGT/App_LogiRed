@@ -18,8 +18,10 @@ class DriverData {
   final String color;
   final String plate;
   final String maxCapacity;
-  final String imgVehicleSide;
   final String imgVehicleFront;
+  final String imgVehicleBack;
+  final String imgVehicleLeft;
+  final String imgVehicleRight;
   final String imgCargoSpace;
   final String imgVehiclePlate;
 
@@ -41,8 +43,10 @@ class DriverData {
     required this.color,
     required this.plate,
     required this.maxCapacity,
-    required this.imgVehicleSide,
     required this.imgVehicleFront,
+    required this.imgVehicleBack,
+    required this.imgVehicleLeft,
+    required this.imgVehicleRight,
     required this.imgCargoSpace,
     required this.imgVehiclePlate,
   });

@@ -55,6 +55,9 @@ class ApiService {
 
   Future<Response> getRideById(int id) => _dio.get('rides/$id');
 
+  Future<Response> getSuggestedPrice(int rideId) =>
+      _dio.get('rides/$rideId/suggested-price');
+
   Future<Response> getAvailableTrips() => _dio.get('rides/available');
 
   Future<Response> getMyAcceptedTrips() => _dio.get('rides/driver/me');
@@ -124,4 +127,7 @@ class ApiService {
 
   Future<Response> createReview(Map<String, dynamic> data) =>
       _dio.post('reviews', data: data);
+
+  Future<Response> getDriverReviews(int driverId) =>
+      _dio.get('reviews/driver/$driverId');
 }

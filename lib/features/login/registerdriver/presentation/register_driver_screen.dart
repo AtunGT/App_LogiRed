@@ -521,7 +521,7 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
               ],
             ),
             Text(
-              '${provider.vehiclePhotosCount}/4 subidas',
+              '${provider.vehiclePhotosCount}/6 subidas',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -538,18 +538,32 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
           childAspectRatio: 1.0,
           children: [
             _VehicleImageTile(
-              label: 'Vista lateral',
-              description: 'Foto completa del lado del vehículo',
-              imagePath: provider.imgVehicleSide,
-              colorScheme: colorScheme,
-              onTap: () => provider.pickImgVehicleSide(ImageSource.camera),
-            ),
-            _VehicleImageTile(
               label: 'Vista frontal',
               description: 'Foto de frente del vehículo',
               imagePath: provider.imgVehicleFront,
               colorScheme: colorScheme,
               onTap: () => provider.pickImgVehicleFront(ImageSource.camera),
+            ),
+            _VehicleImageTile(
+              label: 'Vista trasera',
+              description: 'Foto de la parte de atrás del vehículo',
+              imagePath: provider.imgVehicleBack,
+              colorScheme: colorScheme,
+              onTap: () => provider.pickImgVehicleBack(ImageSource.camera),
+            ),
+            _VehicleImageTile(
+              label: 'Vista lateral izquierda',
+              description: 'Foto completa del lado izquierdo',
+              imagePath: provider.imgVehicleLeft,
+              colorScheme: colorScheme,
+              onTap: () => provider.pickImgVehicleLeft(ImageSource.camera),
+            ),
+            _VehicleImageTile(
+              label: 'Vista lateral derecha',
+              description: 'Foto completa del lado derecho',
+              imagePath: provider.imgVehicleRight,
+              colorScheme: colorScheme,
+              onTap: () => provider.pickImgVehicleRight(ImageSource.camera),
             ),
             _VehicleImageTile(
               label: 'Área de carga',
@@ -569,7 +583,7 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
         ),
         const SizedBox(height: 12),
         Text(
-          'Se requieren las 4 fotos para enviar el vehículo a revisión.',
+          'Se requieren las 6 fotos para enviar el vehículo a revisión.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),

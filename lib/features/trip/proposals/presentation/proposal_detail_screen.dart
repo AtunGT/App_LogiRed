@@ -51,6 +51,9 @@ class _ProposalDetailScreenState extends State<ProposalDetailScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final driver = _p.driver;
     final car = _p.car;
+    final driverId = (driver?.iduser != null && driver!.iduser != 0)
+        ? driver.iduser
+        : (_p.idDriver ?? 0);
     final driverName = (driver != null &&
             '${driver.name} ${driver.lastname}'.trim().isNotEmpty)
         ? '${driver.name} ${driver.lastname}'.trim()
@@ -199,6 +202,30 @@ class _ProposalDetailScreenState extends State<ProposalDetailScreen> {
                         height: 1.5,
                       ),
                 ),
+                if (driverId != 0) ...[
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ElevatedButton(
+                      onPressed: () => _showDriverReviews(context, driverId),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                      ),
+                      child: const Text(
+                        'Ver más reseñas',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -311,7 +338,12 @@ class _ProposalDetailScreenState extends State<ProposalDetailScreen> {
   String _buildAiSummary(UserResponse? driverArg) {
     final driver = driverArg;
     if (driver == null) {
-      return 'No hay informaciÃ³n disponible sobre este conductor.';
+      return 'No hay información disponible sobre este conductor.';
+    }
+
+    // Resumen generado por IA en el backend (driver_info.summary_profile).
+    if (driver.summaryProfile != null && driver.summaryProfile!.isNotEmpty) {
+      return driver.summaryProfile!;
     }
 
     final parts = <String>[];
@@ -320,13 +352,13 @@ class _ProposalDetailScreenState extends State<ProposalDetailScreen> {
       final r = driver.rating!;
       if (r >= 4.8) {
         parts.add(
-            'Este conductor tiene valoraciones sobresalientes (${r.toStringAsFixed(1)} â˜…), lo que refleja un servicio excepcional y consistente.');
+            'Este conductor tiene valoraciones sobresalientes (${r.toStringAsFixed(1)} ★), lo que refleja un servicio excepcional y consistente.');
       } else if (r >= 4.5) {
         parts.add(
-            'Este conductor cuenta con muy buenas valoraciones (${r.toStringAsFixed(1)} â˜…), indicando un servicio confiable y de calidad.');
+            'Este conductor cuenta con muy buenas valoraciones (${r.toStringAsFixed(1)} ★), indicando un servicio confiable y de calidad.');
       } else {
         parts.add(
-            'Este conductor tiene valoraciones de ${r.toStringAsFixed(1)} â˜….');
+            'Este conductor tiene valoraciones de ${r.toStringAsFixed(1)} ★.');
       }
     }
 
@@ -343,10 +375,19 @@ class _ProposalDetailScreenState extends State<ProposalDetailScreen> {
     }
 
     if (parts.isEmpty) {
-      return 'Conductor registrado en LogiRed. Revisa su vehÃ­culo y precio antes de aceptar.';
+      return 'Conductor registrado en LogiRed. Revisa su vehículo y precio antes de aceptar.';
     }
 
     return parts.join(' ');
+  }
+
+  void _showDriverReviews(BuildContext context, int driverId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ReviewsSheet(driverId: driverId),
+    );
   }
 }
 
@@ -498,9 +539,222 @@ class _CarPlaceholder extends StatelessWidget {
                 size: 56,
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
             const SizedBox(height: 8),
-            Text('Sin foto del vehÃ­culo',
+            Text('Sin foto del vehículo',
                 style: TextStyle(color: colorScheme.onSurfaceVariant)),
           ],
         ),
       );
+}
+
+class _ReviewsSheet extends StatefulWidget {
+  final int driverId;
+  const _ReviewsSheet({required this.driverId});
+
+  @override
+  State<_ReviewsSheet> createState() => _ReviewsSheetState();
+}
+
+class _ReviewsSheetState extends State<_ReviewsSheet> {
+  bool _loading = true;
+  String? _error;
+  List<Review> _reviews = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final res =
+          await context.read<ApiService>().getDriverReviews(widget.driverId);
+      final data = res.data;
+      final list =
+          (data is Map ? (data['reviews'] ?? data['data']) : data) as List? ??
+              [];
+      final reviews =
+          list.map((e) => Review.fromJson(e as Map<String, dynamic>)).toList();
+      // Primero las reseñas con comentario, luego por calificación descendente.
+      reviews.sort((a, b) {
+        if (a.hasComment != b.hasComment) return a.hasComment ? -1 : 1;
+        return b.rating.compareTo(a.rating);
+      });
+      if (mounted) {
+        setState(() {
+          _reviews = reviews;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'No se pudieron cargar las reseñas';
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLow,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.reviews_outlined,
+                        size: 20, color: colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Reseñas',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    if (!_loading && _error == null && _reviews.isNotEmpty)
+                      Text(
+                        '${_reviews.length} en total',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: colorScheme.outlineVariant),
+              Expanded(child: _buildBody(scrollController, colorScheme)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBody(ScrollController controller, ColorScheme colorScheme) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: Text(_error!, style: TextStyle(color: colorScheme.error)),
+      );
+    }
+    if (_reviews.isEmpty) {
+      return Center(
+        child: Text(
+          'Este conductor aún no tiene reseñas.',
+          style: TextStyle(color: colorScheme.onSurfaceVariant),
+        ),
+      );
+    }
+    return ListView.separated(
+      controller: controller,
+      padding: const EdgeInsets.all(16),
+      itemCount: _reviews.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) => _ReviewTile(review: _reviews[i]),
+    );
+  }
+}
+
+class _ReviewTile extends StatelessWidget {
+  final Review review;
+  const _ReviewTile({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: colorScheme.primaryContainer,
+                child: Icon(Icons.person,
+                    size: 18, color: colorScheme.onPrimaryContainer),
+              ),
+              const SizedBox(width: 10),
+              _ReviewStars(rating: review.rating),
+              const SizedBox(width: 6),
+              Text(
+                review.rating.toStringAsFixed(1),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          if (review.hasComment) ...[
+            const SizedBox(height: 8),
+            Text(
+              review.review,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                    height: 1.4,
+                  ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ReviewStars extends StatelessWidget {
+  final double rating;
+  const _ReviewStars({required this.rating});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final starValue = i + 1;
+        IconData icon;
+        if (rating >= starValue) {
+          icon = Icons.star_rounded;
+        } else if (rating >= starValue - 0.5) {
+          icon = Icons.star_half_rounded;
+        } else {
+          icon = Icons.star_outline_rounded;
+        }
+        return Icon(icon, size: 15, color: const Color(0xFFFFC107));
+      }),
+    );
+  }
 }

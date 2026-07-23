@@ -47,6 +47,7 @@ Future<Proposal> enrichProposal(Proposal basic) async {
         imageUrl: base.imageUrl,
         rating: (info['rating'] as num?)?.toDouble() ?? result.driver?.rating,
         totalTrips: result.driver?.totalTrips,
+        summaryProfile: base.summaryProfile,
       );
 
       result = result.copyWith(

@@ -19,8 +19,10 @@ class RegisterDriverUseCase {
         data.color.isEmpty ||
         data.plate.isEmpty ||
         data.maxCapacity.isEmpty ||
-        data.imgVehicleSide.isEmpty ||
         data.imgVehicleFront.isEmpty ||
+        data.imgVehicleBack.isEmpty ||
+        data.imgVehicleLeft.isEmpty ||
+        data.imgVehicleRight.isEmpty ||
         data.imgCargoSpace.isEmpty ||
         data.imgVehiclePlate.isEmpty) {
       throw Exception('Completa todos los campos obligatorios');

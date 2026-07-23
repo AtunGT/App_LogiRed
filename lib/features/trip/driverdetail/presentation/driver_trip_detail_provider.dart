@@ -28,6 +28,28 @@ class DriverTripDetailProvider extends ChangeNotifier with ViewStateMixin {
     notifyListeners();
   }
 
+  String _formatPrice(num value) =>
+      '\$${value.toInt().toString().replaceAllMapped(
+            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            (m) => '${m[1]},',
+          )}';
+
+  /// Extrae el precio sugerido de forma tolerante: acepta un numero directo,
+  /// o un objeto con claves comunes ({suggested_price}, {price}, {data: ...}).
+  num? _extractSuggestedPrice(dynamic data) {
+    if (data is num) return data;
+    if (data is String) return num.tryParse(data);
+    if (data is Map) {
+      final v = data['suggested_price'] ??
+          data['suggestedPrice'] ??
+          data['price'] ??
+          data['suggested'] ??
+          data['data'];
+      return _extractSuggestedPrice(v);
+    }
+    return null;
+  }
+
   Future<void> load(int tripId) async {
     isLoading = true;
     error = null;
@@ -38,15 +60,21 @@ class DriverTripDetailProvider extends ChangeNotifier with ViewStateMixin {
       final raw = tripRes.data['ride'] ?? tripRes.data;
       trip = Trip.fromJson(raw as Map<String, dynamic>);
 
+      // Precio embebido en el viaje (fallback).
       final sp = raw['suggested_price'] ?? raw['price_suggestion'];
-      if (sp != null) {
-        final spVal = (sp as num).toDouble();
-        if (spVal > 0) {
-          suggestedPrice = '\$${spVal.toInt().toString().replaceAllMapped(
-                RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                (m) => '${m[1]},',
-              )}';
+      if (sp is num && sp > 0) {
+        suggestedPrice = _formatPrice(sp);
+      }
+
+      // Precio sugerido por ML (Random Forest): endpoint dedicado, autoritativo.
+      try {
+        final spRes = await _api.getSuggestedPrice(tripId);
+        final spVal = _extractSuggestedPrice(spRes.data);
+        if (spVal != null && spVal > 0) {
+          suggestedPrice = _formatPrice(spVal);
         }
+      } catch (e) {
+        debugPrint('Error cargando precio sugerido: $e');
       }
 
       try {

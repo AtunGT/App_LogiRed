@@ -37,6 +37,9 @@ class UserResponse {
   final double? rating;
   final int? totalTrips;
 
+  /// Resumen generado por IA sobre el conductor (driver_info.summary_profile).
+  final String? summaryProfile;
+
   final String driverStatus;
 
   final String? rejectReason;
@@ -52,12 +55,14 @@ class UserResponse {
     this.imageUrl,
     this.rating,
     this.totalTrips,
+    this.summaryProfile,
     this.driverStatus = DriverStatus.fallback,
     this.rejectReason,
   });
 
   factory UserResponse.fromJson(Map<String, dynamic> json) {
     final d = json['data'] ?? json;
+    final driverInfo = d['driver_info'] as Map<String, dynamic>?;
     return UserResponse(
       iduser: d['iduser'] ?? 0,
       name: d['name'] ?? '',
@@ -67,12 +72,41 @@ class UserResponse {
       birthdate: d['birthdate'] ?? '',
       userType: d['user_type'] ?? 1,
       imageUrl: _nonEmpty(d['image_url']),
-      rating: (d['rating'] as num?)?.toDouble(),
+      rating: (d['rating'] as num?)?.toDouble() ??
+          (driverInfo?['rating'] as num?)?.toDouble(),
       totalTrips: (d['total_trips'] as num?)?.toInt(),
+      summaryProfile: _nonEmpty(d['summary_profile']) ??
+          _nonEmpty(driverInfo?['summary_profile']),
       driverStatus: DriverStatus.parse(d['driver_status']),
       rejectReason: _nonEmpty(d['reject_reason']),
     );
   }
+}
+
+class Review {
+  final int id;
+  final String review;
+  final double rating;
+  final int iduser;
+  final int idPassanger;
+
+  Review({
+    required this.id,
+    required this.review,
+    required this.rating,
+    required this.iduser,
+    required this.idPassanger,
+  });
+
+  bool get hasComment => review.trim().isNotEmpty;
+
+  factory Review.fromJson(Map<String, dynamic> json) => Review(
+        id: json['id'] ?? 0,
+        review: (json['review'] as String?)?.trim() ?? '',
+        rating: (json['rating'] as num?)?.toDouble() ?? 0,
+        iduser: json['iduser'] ?? 0,
+        idPassanger: json['id_passanger'] ?? json['id_passenger'] ?? 0,
+      );
 }
 
 class Trip {

@@ -34,8 +34,10 @@ class RegisterDriverProvider extends ChangeNotifier with ViewStateMixin {
   String color = '';
   String plate = '';
   String maxCapacity = '';
-  String? imgVehicleSide;
   String? imgVehicleFront;
+  String? imgVehicleBack;
+  String? imgVehicleLeft;
+  String? imgVehicleRight;
   String? imgCargoSpace;
   String? imgVehiclePlate;
 
@@ -104,8 +106,10 @@ class RegisterDriverProvider extends ChangeNotifier with ViewStateMixin {
   }
 
   int get vehiclePhotosCount => [
-        imgVehicleSide,
         imgVehicleFront,
+        imgVehicleBack,
+        imgVehicleLeft,
+        imgVehicleRight,
         imgCargoSpace,
         imgVehiclePlate,
       ].where((p) => p != null).length;
@@ -235,8 +239,10 @@ class RegisterDriverProvider extends ChangeNotifier with ViewStateMixin {
         color.isEmpty ||
         plate.isEmpty ||
         maxCapacity.isEmpty ||
-        imgVehicleSide == null ||
         imgVehicleFront == null ||
+        imgVehicleBack == null ||
+        imgVehicleLeft == null ||
+        imgVehicleRight == null ||
         imgCargoSpace == null ||
         imgVehiclePlate == null) {
       error = 'Completa todos los datos y fotos del vehículo';
@@ -316,10 +322,14 @@ class RegisterDriverProvider extends ChangeNotifier with ViewStateMixin {
       _pickImage(source, (p) => docLicense = p);
   Future<void> pickDocAddressProof(ImageSource source) =>
       _pickImage(source, (p) => docAddressProof = p);
-  Future<void> pickImgVehicleSide(ImageSource source) =>
-      _pickImage(source, (p) => imgVehicleSide = p);
   Future<void> pickImgVehicleFront(ImageSource source) =>
       _pickImage(source, (p) => imgVehicleFront = p);
+  Future<void> pickImgVehicleBack(ImageSource source) =>
+      _pickImage(source, (p) => imgVehicleBack = p);
+  Future<void> pickImgVehicleLeft(ImageSource source) =>
+      _pickImage(source, (p) => imgVehicleLeft = p);
+  Future<void> pickImgVehicleRight(ImageSource source) =>
+      _pickImage(source, (p) => imgVehicleRight = p);
   Future<void> pickImgCargoSpace(ImageSource source) =>
       _pickImage(source, (p) => imgCargoSpace = p);
   Future<void> pickImgVehiclePlate(ImageSource source) =>
@@ -340,6 +350,7 @@ class RegisterDriverProvider extends ChangeNotifier with ViewStateMixin {
         phone: phone,
         birthdate: birthdate,
         password: password,
+        profileImagePath: profileImagePath,
         docIdFront: docId!,
         docIdBack: docId!,
         docLicense: docLicense!,
@@ -350,8 +361,10 @@ class RegisterDriverProvider extends ChangeNotifier with ViewStateMixin {
         color: color,
         plate: plate,
         maxCapacity: maxCapacity,
-        imgVehicleSide: imgVehicleSide!,
         imgVehicleFront: imgVehicleFront!,
+        imgVehicleBack: imgVehicleBack!,
+        imgVehicleLeft: imgVehicleLeft!,
+        imgVehicleRight: imgVehicleRight!,
         imgCargoSpace: imgCargoSpace!,
         imgVehiclePlate: imgVehiclePlate!,
       ));

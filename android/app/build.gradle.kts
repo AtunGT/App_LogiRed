@@ -3,9 +3,11 @@ import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
+    id("org.jetbrains.kotlin.android")
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
     // END: FlutterFire Configuration
+    // El Flutter Gradle Plugin debe aplicarse despues de los plugins de Android y Kotlin.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
