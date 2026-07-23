@@ -9,13 +9,41 @@ import '../../../../core/utils/responsive.dart';
 import '../../../main/widgets/driver_app_bar.dart';
 import 'available_trips_provider.dart';
 
-class AvailableTripsScreen extends StatelessWidget {
-  const AvailableTripsScreen({super.key});
+class AvailableTripsScreen extends StatefulWidget {
+  final bool isActive;
+  const AvailableTripsScreen({super.key, this.isActive = true});
+
+  @override
+  State<AvailableTripsScreen> createState() => _AvailableTripsScreenState();
+}
+
+class _AvailableTripsScreenState extends State<AvailableTripsScreen> {
+  late final AvailableTripsProvider _provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _provider = AvailableTripsProvider(context.read<AvailableTripsRepository>(),
+        context.read<ApiService>(), context.read<TokenManager>())
+      ..loadCityAndSearch();
+  }
+
+  @override
+  void didUpdateWidget(covariant AvailableTripsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) _provider.searchTrips();
+  }
+
+  @override
+  void dispose() {
+    _provider.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (c) => AvailableTripsProvider(c.read<AvailableTripsRepository>(), c.read<ApiService>(), c.read<TokenManager>())..loadCityAndSearch(),
+    return ChangeNotifierProvider.value(
+      value: _provider,
       child: Consumer<AvailableTripsProvider>(
         builder: (context, provider, _) {
           final colorScheme = Theme.of(context).colorScheme;

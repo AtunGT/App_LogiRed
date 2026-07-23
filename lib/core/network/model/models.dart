@@ -105,6 +105,10 @@ class Trip {
   final int? paymentMethod;
   final int? paymentStatus;
 
+  /// Motivo de cancelación (ver [CancelReason]); solo tiene valor cuando
+  /// `status == RideStatus.cancelled` y la API ya devuelve `cancel_reason`.
+  final int? cancelReason;
+
   Trip({
     required this.id,
     required this.origin,
@@ -125,6 +129,7 @@ class Trip {
     this.createdAt,
     this.paymentMethod,
     this.paymentStatus,
+    this.cancelReason,
   });
 
   factory Trip.fromJson(Map<String, dynamic> json) => Trip(
@@ -154,6 +159,7 @@ class Trip {
         createdAt: json['created_at'],
         paymentMethod: (json['payment_method'] as num?)?.toInt(),
         paymentStatus: (json['payment_status'] as num?)?.toInt(),
+        cancelReason: (json['cancel_reason'] as num?)?.toInt(),
       );
 }
 

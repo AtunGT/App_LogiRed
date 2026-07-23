@@ -10,8 +10,34 @@ import '../../../main/widgets/driver_app_bar.dart';
 import 'accepted_trips_provider.dart';
 import 'driver_proposal_detail_screen.dart';
 
-class AcceptedTripsScreen extends StatelessWidget {
-  const AcceptedTripsScreen({super.key});
+class AcceptedTripsScreen extends StatefulWidget {
+  final bool isActive;
+  const AcceptedTripsScreen({super.key, this.isActive = true});
+
+  @override
+  State<AcceptedTripsScreen> createState() => _AcceptedTripsScreenState();
+}
+
+class _AcceptedTripsScreenState extends State<AcceptedTripsScreen> {
+  late final AcceptedTripsProvider _provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _provider = AcceptedTripsProvider(context.read<ApiService>())..loadTrips();
+  }
+
+  @override
+  void didUpdateWidget(covariant AcceptedTripsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) _provider.loadTrips();
+  }
+
+  @override
+  void dispose() {
+    _provider.dispose();
+    super.dispose();
+  }
 
   void _selectFilter(AcceptedTripsProvider provider, ProposalFilter filter) {
     provider.setFilter(filter);
@@ -20,8 +46,8 @@ class AcceptedTripsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (c) => AcceptedTripsProvider(c.read<ApiService>())..loadTrips(),
+    return ChangeNotifierProvider.value(
+      value: _provider,
       child: Consumer<AcceptedTripsProvider>(
         builder: (context, provider, _) {
           final colorScheme = Theme.of(context).colorScheme;
@@ -87,6 +113,16 @@ class AcceptedTripsScreen extends StatelessWidget {
                                   provider, ProposalFilter.inProgress),
                               colorScheme: colorScheme,
                             ),
+                            const SizedBox(width: 8),
+                            _FilterChip(
+                              label: 'No seleccionadas',
+                              count: provider.countNotSelected,
+                              selected:
+                                  provider.filter == ProposalFilter.notSelected,
+                              onTap: () => _selectFilter(
+                                  provider, ProposalFilter.notSelected),
+                              colorScheme: colorScheme,
+                            ),
                           ],
                         ),
                       ),
@@ -113,7 +149,9 @@ class AcceptedTripsScreen extends StatelessWidget {
           ? 'No tienes propuestas pendientes'
           : provider.filter == ProposalFilter.accepted
               ? 'No tienes viajes reservados'
-              : 'No tienes viajes en curso';
+              : provider.filter == ProposalFilter.inProgress
+                  ? 'No tienes viajes en curso'
+                  : 'No tienes propuestas sin seleccionar';
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -292,6 +330,14 @@ class _ProposalCard extends StatelessWidget {
 
   String _shortPlace(String full) => full.split(',').first.trim();
 
+  /// Viaje que ya no está abierto (asignado a otro conductor / en curso /
+  /// cerrado) mientras esta propuesta no fue la aceptada.
+  bool get _rideTakenByOther =>
+      item.status != 1 &&
+      item.rideLoaded &&
+      item.rideStatus != 0 &&
+      item.rideStatus != RideStatus.pending;
+
   (String label, Color bg, Color text) _statusInfo() {
     if (item.status == 1) {
       if (RideStatus.isInCourse(item.rideStatus)) {
@@ -301,6 +347,10 @@ class _ProposalCard extends StatelessWidget {
     }
     if (item.status == 3) {
       return ('Rechazada', const Color(0xFFFFEBEE), const Color(0xFFC62828));
+    }
+    if (_rideTakenByOther) {
+      return ('No seleccionada', const Color(0xFFECEFF1),
+          const Color(0xFF546E7A));
     }
     return ('Pendiente', const Color(0xFFFFF8E1), const Color(0xFFE65100));
   }

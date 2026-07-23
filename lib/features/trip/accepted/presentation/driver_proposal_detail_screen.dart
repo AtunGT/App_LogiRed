@@ -32,6 +32,14 @@ class DriverProposalDetailScreen extends StatelessWidget {
     }
   }
 
+  /// Viaje que ya no está abierto (asignado a otro conductor / en curso /
+  /// cerrado) mientras esta propuesta no fue la aceptada.
+  bool get _rideTakenByOther =>
+      item.status != 1 &&
+      item.rideLoaded &&
+      item.rideStatus != 0 &&
+      item.rideStatus != RideStatus.pending;
+
   (String label, Color bg, Color text) _statusInfo() {
     if (item.status == 1) {
       if (RideStatus.isInCourse(item.rideStatus)) {
@@ -41,6 +49,10 @@ class DriverProposalDetailScreen extends StatelessWidget {
     }
     if (item.status == 3) {
       return ('Rechazada', const Color(0xFFFFEBEE), const Color(0xFFC62828));
+    }
+    if (_rideTakenByOther) {
+      return ('No seleccionada', const Color(0xFFECEFF1),
+          const Color(0xFF546E7A));
     }
     return ('Pendiente', const Color(0xFFFFF8E1), const Color(0xFFE65100));
   }
@@ -236,7 +248,9 @@ class DriverProposalDetailScreen extends StatelessWidget {
                     : 'El cliente reservó este viaje contigo.'
                 : item.status == 3
                     ? 'El cliente rechazó esta propuesta.'
-                    : 'Tu propuesta está a la espera de que el cliente la acepte.',
+                    : _rideTakenByOther
+                        ? 'El viaje ya fue asignado a otro conductor.'
+                        : 'Tu propuesta está a la espera de que el cliente la acepte.',
             textAlign: TextAlign.center,
             style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
           ),

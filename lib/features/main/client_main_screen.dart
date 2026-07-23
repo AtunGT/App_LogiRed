@@ -55,10 +55,13 @@ class _ClientMainScreenState extends State<ClientMainScreen> {
     final isExpanded = Responsive.isExpanded(context);
 
     final screens = [
-      ClientHomeScreen(onNavigate: (i) => setState(() => _currentIndex = i)),
+      ClientHomeScreen(
+        onNavigate: (i) => setState(() => _currentIndex = i),
+        isActive: _currentIndex == 0,
+      ),
       RequestTripScreen(isActive: _currentIndex == 1),
-      const MyTripsScreen(),
-      const TripHistoryScreen(),
+      MyTripsScreen(isActive: _currentIndex == 2),
+      TripHistoryScreen(isActive: _currentIndex == 3),
       AccountScreen(isActive: _currentIndex == 4),
     ];
 

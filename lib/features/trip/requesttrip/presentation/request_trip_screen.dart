@@ -98,20 +98,50 @@ class _RequestTripScreenState extends State<RequestTripScreen> {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      initialEntryMode: TimePickerEntryMode.input,
+      initialEntryMode: TimePickerEntryMode.dial,
+      // El formato 12h/AM-PM en español lo aporta el delegado de localización
+      // (EsMaterialLocalizations12hDelegate). Forzamos alwaysUse24HourFormat a
+      // false para que un dispositivo configurado en 24h no lo convierta.
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
         child: child!,
       ),
     );
-    if (picked != null) {
-      final displayHour = picked.hourOfPeriod == 0 ? 12 : picked.hourOfPeriod;
-      final period = picked.period == DayPeriod.am ? 'AM' : 'PM';
-      _hourCtrl.text =
-          '${displayHour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')} $period';
-      provider.onHourChange(
-          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}');
+    if (picked == null) return;
+
+    // Si el viaje es para hoy, no permitir una hora que ya pasó.
+    if (_isToday(provider.date)) {
+      final now = TimeOfDay.now();
+      final pickedMinutes = picked.hour * 60 + picked.minute;
+      final nowMinutes = now.hour * 60 + now.minute;
+      if (pickedMinutes < nowMinutes) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Para hoy no puedes elegir una hora que ya pasó.'),
+            ),
+          );
+        }
+        return;
+      }
     }
+
+    final displayHour = picked.hourOfPeriod == 0 ? 12 : picked.hourOfPeriod;
+    final period = picked.period == DayPeriod.am ? 'AM' : 'PM';
+    _hourCtrl.text =
+        '${displayHour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')} $period';
+    provider.onHourChange(
+        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}');
+  }
+
+  bool _isToday(String date) {
+    if (date.isEmpty) return false;
+    final now = DateTime.now();
+    final today = '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    return date == today;
   }
 
   Future<void> _pickDestinationOnMap(RequestTripProvider provider) async {

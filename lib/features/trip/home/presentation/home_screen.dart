@@ -26,29 +26,28 @@ class _QuickProposal {
 
 class HomeScreen extends StatefulWidget {
   final void Function(int index) onNavigate;
-  const HomeScreen({super.key, required this.onNavigate});
+  final bool isActive;
+  const HomeScreen({super.key, required this.onNavigate, this.isActive = true});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _proposalCount = 0;
   _QuickProposal? _actionable;
 
   @override
   void initState() {
     super.initState();
-    _loadProposalCount();
     _loadActionableProposal();
   }
 
-  Future<void> _loadProposalCount() async {
-    try {
-      final res = await context.read<ApiService>().getMyAcceptedTrips();
-      final list = (res.data['rides'] ?? res.data) as List? ?? [];
-      if (mounted) setState(() => _proposalCount = list.length);
-    } catch (_) {}
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _loadActionableProposal();
+    }
   }
 
   Future<void> _loadActionableProposal() async {
@@ -147,7 +146,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 iconBg: const Color(0xFFFEF3C7),
                 title: 'Mis Propuestas',
                 subtitle: 'Estado de tus propuestas enviadas',
-                badge: _proposalCount > 0 ? _proposalCount : null,
                 onTap: () => widget.onNavigate(2),
                 colorScheme: colorScheme,
               ),
@@ -279,7 +277,6 @@ class _NavCard extends StatelessWidget {
   final Color iconBg;
   final String title;
   final String subtitle;
-  final int? badge;
   final VoidCallback onTap;
   final ColorScheme colorScheme;
 
@@ -289,7 +286,6 @@ class _NavCard extends StatelessWidget {
     required this.iconBg,
     required this.title,
     required this.subtitle,
-    this.badge,
     required this.onTap,
     required this.colorScheme,
   });
@@ -334,25 +330,6 @@ class _NavCard extends StatelessWidget {
                         color: colorScheme.onSurface,
                       ),
                 ),
-                if (badge != null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '$badge',
-                      style: TextStyle(
-                        color: colorScheme.onPrimary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
             const SizedBox(height: 4),

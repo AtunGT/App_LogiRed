@@ -61,19 +61,34 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
       child: Consumer<ActiveTripProvider>(
         builder: (context, provider, _) {
           final colorScheme = Theme.of(context).colorScheme;
-          return Scaffold(
-            backgroundColor: colorScheme.surfaceContainerLow,
-            appBar: const DriverAppBar(showBack: true),
-            body: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : provider.trip == null
-                    ? Center(
-                        child: Text(
-                          provider.error ?? 'Error al cargar el viaje',
-                          style: TextStyle(color: colorScheme.error),
-                        ),
-                      )
-                    : _NavBody(provider: provider, colorScheme: colorScheme),
+          // El conductor no puede salir del viaje en curso hasta completarlo
+          // (al finalizar se navega a /payment con pushReplacement). Mientras
+          // el viaje esté cargado, se bloquean el botón de retroceso y el gesto
+          // del sistema. En carga/error sí puede volver para no quedar atrapado.
+          final lockNavigation = widget.isDriver && provider.trip != null;
+          return PopScope(
+            canPop: !lockNavigation,
+            onPopInvokedWithResult: (didPop, result) {
+              if (didPop) return;
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Debes finalizar el viaje para poder salir.'),
+                behavior: SnackBarBehavior.floating,
+              ));
+            },
+            child: Scaffold(
+              backgroundColor: colorScheme.surfaceContainerLow,
+              appBar: DriverAppBar(showBack: !lockNavigation),
+              body: provider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : provider.trip == null
+                      ? Center(
+                          child: Text(
+                            provider.error ?? 'Error al cargar el viaje',
+                            style: TextStyle(color: colorScheme.error),
+                          ),
+                        )
+                      : _NavBody(provider: provider, colorScheme: colorScheme),
+            ),
           );
         },
       ),

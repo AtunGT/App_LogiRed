@@ -8,7 +8,9 @@ import '../trip/inprogress/presentation/trip_in_progress_screen.dart';
 
 class ClientHomeScreen extends StatefulWidget {
   final ValueChanged<int> onNavigate;
-  const ClientHomeScreen({required this.onNavigate, super.key});
+  final bool isActive;
+  const ClientHomeScreen(
+      {required this.onNavigate, this.isActive = true, super.key});
 
   @override
   State<ClientHomeScreen> createState() => _ClientHomeScreenState();
@@ -24,6 +26,15 @@ class _ClientHomeScreenState extends State<ClientHomeScreen> {
       context.read<HomeProvider>().load();
     });
     _loadInProgressTrip();
+  }
+
+  @override
+  void didUpdateWidget(covariant ClientHomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      context.read<HomeProvider>().load();
+      _loadInProgressTrip();
+    }
   }
 
   Future<void> _loadInProgressTrip() async {

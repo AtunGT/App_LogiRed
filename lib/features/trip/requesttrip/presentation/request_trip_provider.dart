@@ -129,6 +129,13 @@ class RequestTripProvider extends ChangeNotifier with ViewStateMixin {
       return;
     }
 
+    final scheduled = _parseDateTime(date, hour);
+    if (scheduled != null && scheduled.isBefore(DateTime.now())) {
+      error = 'La fecha y hora seleccionadas ya pasaron';
+      notifyListeners();
+      return;
+    }
+
     isLoading = true;
     error = null;
     notifyListeners();
@@ -155,5 +162,15 @@ class RequestTripProvider extends ChangeNotifier with ViewStateMixin {
 
     isLoading = false;
     notifyListeners();
+  }
+
+  DateTime? _parseDateTime(String date, String hour) {
+    try {
+      final d = date.split('-').map(int.parse).toList();
+      final h = hour.split(':').map(int.parse).toList();
+      return DateTime(d[0], d[1], d[2], h[0], h[1]);
+    } catch (_) {
+      return null;
+    }
   }
 }

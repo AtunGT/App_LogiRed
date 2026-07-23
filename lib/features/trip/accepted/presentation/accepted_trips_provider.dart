@@ -5,7 +5,7 @@ import '../../../../core/network/model/models.dart';
 import '../../../../core/state/view_state.dart';
 import '../../../../core/utils/ride_status.dart';
 
-enum ProposalFilter { pending, accepted, inProgress }
+enum ProposalFilter { pending, accepted, inProgress, notSelected }
 
 const int kProposalAccepted = 1;
 const int kProposalRejected = 3;
@@ -17,6 +17,21 @@ bool _rideInProgress(DriverProposalItem p) =>
 /// las pestañas activas.
 bool _rideClosed(DriverProposalItem p) =>
     p.rideLoaded && RideStatus.isClosed(p.rideStatus);
+
+/// El viaje ya salió del estado "publicado" (fue asignado a otro conductor, ya
+/// está en curso, o se cerró) y esta propuesta no fue la aceptada: el conductor
+/// perdió y no debe seguir "esperando respuesta". Requiere haber podido leer el
+/// viaje; si no se cargó, se mantiene como pendiente para no descartar por error.
+bool _rideTakenByOther(DriverProposalItem p) =>
+    p.status != kProposalAccepted &&
+    p.rideLoaded &&
+    p.rideStatus != 0 &&
+    p.rideStatus != RideStatus.pending;
+
+/// Propuesta que ya no ganará: rechazada explícitamente por el cliente, o el
+/// viaje quedó asignado a otro conductor / cerrado.
+bool _isNotSelected(DriverProposalItem p) =>
+    p.status == kProposalRejected || _rideTakenByOther(p);
 
 class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
   final ApiService _api;
@@ -39,9 +54,7 @@ class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
   }
 
   bool _isPending(DriverProposalItem p) =>
-      p.status != kProposalAccepted &&
-      p.status != kProposalRejected &&
-      !_rideClosed(p);
+      p.status != kProposalAccepted && !_isNotSelected(p);
 
   // Reservado: propuesta aceptada, viaje asignado y aún sin iniciar.
   bool _isAccepted(DriverProposalItem p) =>
@@ -62,12 +75,15 @@ class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
         return _all.where(_isAccepted).toList();
       case ProposalFilter.inProgress:
         return _all.where(_isInProgress).toList();
+      case ProposalFilter.notSelected:
+        return _all.where(_isNotSelected).toList();
     }
   }
 
   int get countPending => _all.where(_isPending).length;
   int get countAccepted => _all.where(_isAccepted).length;
   int get countInProgress => _all.where(_isInProgress).length;
+  int get countNotSelected => _all.where(_isNotSelected).length;
 
   void setFilter(ProposalFilter f) {
     filter = f;

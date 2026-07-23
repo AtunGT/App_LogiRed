@@ -26,3 +26,13 @@ class RideStatus {
 
   static String label(int? s) => _labels[s] ?? '—';
 }
+
+/// Motivo por el que un viaje pasó a [RideStatus.cancelled]. Lo devuelve la API
+/// en `cancel_reason`; mientras no esté desplegado llega null y la UI degrada al
+/// texto genérico "Cancelado".
+class CancelReason {
+  const CancelReason._();
+
+  static const int manual = 1;
+  static const int expired = 2;
+}

@@ -1,5 +1,6 @@
 import '../../../../../core/network/api_service.dart';
 import '../../../../../core/network/model/models.dart';
+import '../../../../../core/utils/ride_status.dart';
 import '../../domain/my_trips_repository.dart';
 
 class MyTripsRepositoryImpl implements MyTripsRepository {
@@ -15,7 +16,10 @@ class MyTripsRepositoryImpl implements MyTripsRepository {
   }
 
   @override
-  Future<void> cancelTrip(int tripId) async {
-    await _api.updateRideStatus(tripId, {'status': 4});
+  Future<void> cancelTrip(int tripId, {int reason = CancelReason.manual}) async {
+    await _api.updateRideStatus(tripId, {
+      'status': RideStatus.cancelled,
+      'cancel_reason': reason,
+    });
   }
 }

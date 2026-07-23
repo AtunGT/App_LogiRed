@@ -6,10 +6,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'core/config/stripe_config.dart';
 import 'core/di/app_providers.dart';
+import 'core/localization/es_material_localizations_12h.dart';
 import 'core/di/service_locator.dart';
 import 'core/local/token_manager.dart';
 import 'core/routes/app_routes.dart';
@@ -28,6 +30,8 @@ Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Necesario para el delegado de localización 12h (usa intl.DateFormat).
+  await initializeDateFormatting('es', null);
   Stripe.publishableKey = stripePublishableKey;
   await Stripe.instance.applySettings();
   await Firebase.initializeApp(
@@ -62,6 +66,9 @@ class LogiRedApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       locale: const Locale('es'),
       localizationsDelegates: const [
+        // Español con formato de hora de 12h (AM/PM) en vez del 24h que
+        // Flutter fija para el español. Reemplaza al delegado por defecto.
+        EsMaterialLocalizations12hDelegate(),
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

@@ -103,9 +103,12 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
     final isExpanded = Responsive.isExpanded(context);
 
     final screens = [
-      HomeScreen(onNavigate: (i) => setState(() => _currentIndex = i)),
-      const AvailableTripsScreen(),
-      const AcceptedTripsScreen(),
+      HomeScreen(
+        onNavigate: (i) => setState(() => _currentIndex = i),
+        isActive: _currentIndex == 0,
+      ),
+      AvailableTripsScreen(isActive: _currentIndex == 1),
+      AcceptedTripsScreen(isActive: _currentIndex == 2),
       DriverWalletScreen(isActive: _currentIndex == 3),
       AccountScreen(isActive: _currentIndex == 4),
     ];

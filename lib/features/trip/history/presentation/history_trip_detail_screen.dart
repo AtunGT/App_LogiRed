@@ -291,6 +291,7 @@ class _HistoryTripDetailScreenState extends State<HistoryTripDetailScreen> {
                 const SizedBox(height: 12),
                 _StatusChip(
                     status: _trip.status,
+                    cancelReason: _trip.cancelReason,
                     colorScheme: colorScheme,
                     date: _trip.createdAt),
                 const SizedBox(height: 12),
@@ -381,14 +382,21 @@ class _HistoryTripDetailScreenState extends State<HistoryTripDetailScreen> {
 
 class _StatusChip extends StatelessWidget {
   final int status;
+  final int? cancelReason;
   final ColorScheme colorScheme;
   final String? date;
   const _StatusChip(
-      {required this.status, required this.colorScheme, this.date});
+      {required this.status,
+      this.cancelReason,
+      required this.colorScheme,
+      this.date});
 
   @override
   Widget build(BuildContext context) {
     final cancelled = status == RideStatus.cancelled;
+    final label = cancelled && cancelReason == CancelReason.expired
+        ? 'Expiró'
+        : RideStatus.label(status);
     return Row(
       children: [
         Container(
@@ -409,7 +417,7 @@ class _StatusChip extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Text(
-                RideStatus.label(status),
+                label,
                 style: TextStyle(
                   color: cancelled ? colorScheme.error : colorScheme.primary,
                   fontWeight: FontWeight.w600,

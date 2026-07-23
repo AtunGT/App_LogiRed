@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/local/token_manager.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 import '../../../../core/state/view_state.dart';
+import '../../../../core/utils/ride_status.dart';
+import '../../../../core/utils/trip_schedule.dart';
 import '../domain/available_trips_repository.dart';
 
 class AvailableTripsProvider extends ChangeNotifier with ViewStateMixin {
@@ -22,6 +25,26 @@ class AvailableTripsProvider extends ChangeNotifier with ViewStateMixin {
     _proposedIds.add(tripId);
     trips = trips.where((t) => t.id != tripId).toList();
     notifyListeners();
+  }
+
+  /// Viaje publicado, sin conductor y con su fecha/hora ya vencida.
+  bool _isExpired(Trip t) =>
+      t.status == RideStatus.pending &&
+      t.driverId == null &&
+      TripSchedule.isPast(t.date, t.hour);
+
+  /// Cancela en la API (best-effort) los viajes vencidos. `cancel_reason` deja
+  /// registrado que fue por expiración; el backend degrada e ignora el campo
+  /// mientras no esté desplegado.
+  Future<void> _cancelExpired(List<Trip> expired) async {
+    await Future.wait(expired.map((t) async {
+      try {
+        await _api.updateRideStatus(t.id, {
+          'status': RideStatus.cancelled,
+          'cancel_reason': CancelReason.expired,
+        });
+      } catch (_) {}
+    }));
   }
 
   Future<void> loadCityAndSearch() async {
@@ -52,7 +75,19 @@ class AvailableTripsProvider extends ChangeNotifier with ViewStateMixin {
       } catch (_) {}
 
       final all = await _repository.getAvailableTrips(city);
-      trips = all.where((t) => !_proposedIds.contains(t.id)).toList();
+      final live = all.where((t) => !_proposedIds.contains(t.id)).toList();
+
+      // Viajes cuya fecha/hora ya pasó y siguen sin conductor: se cancelan
+      // automáticamente (por expiración) y no se muestran. La cancelación real
+      // en la API se dispara en segundo plano para no retrasar la lista.
+      final expired = live.where(_isExpired).toList();
+      if (expired.isNotEmpty) {
+        final expiredIds = expired.map((t) => t.id).toSet();
+        trips = live.where((t) => !expiredIds.contains(t.id)).toList();
+        unawaited(_cancelExpired(expired));
+      } else {
+        trips = live;
+      }
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         error = 'Sesión expirada. Vuelve a iniciar sesión';

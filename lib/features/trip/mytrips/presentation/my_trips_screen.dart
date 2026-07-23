@@ -15,13 +15,39 @@ const int _kWaiting = 0;
 const int _kAssigned = 1;
 const int _kInProgress = 2;
 
-class MyTripsScreen extends StatelessWidget {
-  const MyTripsScreen({super.key});
+class MyTripsScreen extends StatefulWidget {
+  final bool isActive;
+  const MyTripsScreen({super.key, this.isActive = true});
+
+  @override
+  State<MyTripsScreen> createState() => _MyTripsScreenState();
+}
+
+class _MyTripsScreenState extends State<MyTripsScreen> {
+  late final MyTripsProvider _provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _provider = MyTripsProvider(context.read<MyTripsRepository>())..loadTrips();
+  }
+
+  @override
+  void didUpdateWidget(covariant MyTripsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) _provider.loadTrips();
+  }
+
+  @override
+  void dispose() {
+    _provider.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (c) => MyTripsProvider(c.read<MyTripsRepository>())..loadTrips(),
+    return ChangeNotifierProvider.value(
+      value: _provider,
       child: const _MyTripsBody(),
     );
   }

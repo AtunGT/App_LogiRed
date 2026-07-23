@@ -9,15 +9,44 @@ import '../../proposals/proposal_enrichment.dart';
 import 'history_trip_detail_screen.dart';
 import 'trip_history_provider.dart';
 
-class TripHistoryScreen extends StatelessWidget {
+class TripHistoryScreen extends StatefulWidget {
   final bool showBackButton;
-  const TripHistoryScreen({super.key, this.showBackButton = false});
+  final bool isActive;
+  const TripHistoryScreen(
+      {super.key, this.showBackButton = false, this.isActive = true});
+
+  @override
+  State<TripHistoryScreen> createState() => _TripHistoryScreenState();
+}
+
+class _TripHistoryScreenState extends State<TripHistoryScreen> {
+  late final TripHistoryProvider _provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _provider = TripHistoryProvider(
+        context.read<TripHistoryRepository>(), context.read<TokenManager>())
+      ..loadHistory();
+  }
+
+  @override
+  void didUpdateWidget(covariant TripHistoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) _provider.loadHistory();
+  }
+
+  @override
+  void dispose() {
+    _provider.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (c) => TripHistoryProvider(c.read<TripHistoryRepository>(), c.read<TokenManager>())..loadHistory(),
-      child: _HistoryBody(showBackButton: showBackButton),
+    return ChangeNotifierProvider.value(
+      value: _provider,
+      child: _HistoryBody(showBackButton: widget.showBackButton),
     );
   }
 }
@@ -355,7 +384,9 @@ class _HistoryCardState extends State<_HistoryCard> {
                 ),
                 child: Text(
                   trip.status == RideStatus.cancelled
-                      ? 'Cancelado'
+                      ? (trip.cancelReason == CancelReason.expired
+                          ? 'Expiró'
+                          : 'Cancelado')
                       : 'Completado',
                   style: TextStyle(
                     color: trip.status == RideStatus.cancelled
