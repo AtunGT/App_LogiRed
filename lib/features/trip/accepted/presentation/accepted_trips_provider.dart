@@ -13,23 +13,15 @@ const int kProposalRejected = 3;
 bool _rideInProgress(DriverProposalItem p) =>
     RideStatus.isInCourse(p.rideStatus);
 
-/// Viaje ya terminado (completado o cancelado): pertenece al historial, no a
-/// las pestañas activas.
 bool _rideClosed(DriverProposalItem p) =>
     p.rideLoaded && RideStatus.isClosed(p.rideStatus);
 
-/// El viaje ya salió del estado "publicado" (fue asignado a otro conductor, ya
-/// está en curso, o se cerró) y esta propuesta no fue la aceptada: el conductor
-/// perdió y no debe seguir "esperando respuesta". Requiere haber podido leer el
-/// viaje; si no se cargó, se mantiene como pendiente para no descartar por error.
 bool _rideTakenByOther(DriverProposalItem p) =>
     p.status != kProposalAccepted &&
     p.rideLoaded &&
     p.rideStatus != 0 &&
     p.rideStatus != RideStatus.pending;
 
-/// Propuesta que ya no ganará: rechazada explícitamente por el cliente, o el
-/// viaje quedó asignado a otro conductor / cerrado.
 bool _isNotSelected(DriverProposalItem p) =>
     p.status == kProposalRejected || _rideTakenByOther(p);
 
@@ -41,8 +33,6 @@ class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
   Timer? _refreshTimer;
 
   AcceptedTripsProvider(this._api) {
-    // Refresco silencioso para que los estados (Reservado → En curso →
-    // finalizado) se actualicen solos sin que el conductor recargue.
     _refreshTimer = Timer.periodic(
         const Duration(seconds: 20), (_) => loadTrips(silent: true));
   }
@@ -56,14 +46,12 @@ class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
   bool _isPending(DriverProposalItem p) =>
       p.status != kProposalAccepted && !_isNotSelected(p);
 
-  // Reservado: propuesta aceptada, viaje asignado y aún sin iniciar.
   bool _isAccepted(DriverProposalItem p) =>
       p.status == kProposalAccepted &&
       p.rideLoaded &&
       !_rideClosed(p) &&
       !_rideInProgress(p);
 
-  // En curso: viaje asignado y ya en camino o en proceso.
   bool _isInProgress(DriverProposalItem p) =>
       p.status == kProposalAccepted && p.rideLoaded && _rideInProgress(p);
 
@@ -113,9 +101,6 @@ class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
     notifyListeners();
   }
 
-  /// GET /rides/driver/me devuelve TODOS los viajes asignados al conductor con
-  /// su estado real (incluidos completados y cancelados), sin los 403 que da
-  /// GET /rides/{id} por viaje.
   Future<Map<int, Trip>> _loadAssignedRides() async {
     try {
       final res = await _api.getMyAcceptedTrips();

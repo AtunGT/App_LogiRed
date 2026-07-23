@@ -52,20 +52,14 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
   bool _refetchingRoute = false;
   bool _wentToPayment = false;
 
-  // Pasos de la ruta para el banner de instrucciones (se avanzan con la
-  // posición del conductor que llega por WebSocket, sin narrador de voz).
   List<NavStep> _steps = [];
   int _stepIndex = 0;
   String _stepDistanceText = '';
 
-  /// [_suffixMeters]\[i\] = metros desde _polylinePoints[i] hasta el final;
-  /// permite recalcular en vivo el tiempo/distancia restantes.
   List<double> _suffixMeters = [];
   double _routeDistanceMeters = 0;
   double _routeDurationSecs = 0;
 
-  /// Cámara de navegación (siguiendo al carrito) solo cuando el viaje ya va
-  /// del origen al destino; mientras el conductor va al origen, vista plana.
   bool get _navMode => _rideStatus == RideStatus.inProcess;
 
   LatLng get _originLatLng =>
@@ -117,13 +111,10 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
           _updateRemainingEta();
         });
         if (_navMode && _follow) {
-          // Misma cámara de navegación que la vista del conductor: gira con
-          // el rumbo que él lleva, no con los sensores del teléfono cliente.
           _guardedAnimate(CameraUpdate.newCameraPosition(CameraPosition(
               target: pos, zoom: 18.5, tilt: 55, bearing: _driverBearing)));
         }
         if (firstFix && !_navMode) {
-          // Conductor rumbo al origen: se dibuja su ruta hacia el origen.
           _loadRoute(pos, _originLatLng, fit: true);
         } else {
           _maybeRecalcRoute();
@@ -138,8 +129,6 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
   Future<void> _loadData() async {
     await Future.wait([
       _loadAcceptedProposal(),
-      // Yendo al origen la ruta se traza desde la posición del conductor
-      // cuando llega su primer fix por WebSocket.
       if (_navMode) _loadRoute(_originLatLng, _destinationLatLng, fit: true),
     ]);
   }
@@ -193,7 +182,6 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
     }
   }
 
-  /// Recalcula el tiempo restante mostrado con cada posición del conductor.
   void _updateRemainingEta() {
     if (_driverLatLng == null ||
         _polylinePoints.length < 2 ||
@@ -213,7 +201,6 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
     }
   }
 
-  /// Avanza el paso de navegación del banner según la posición del conductor.
   void _updateStepFromDriver() {
     if (_steps.isEmpty || _driverLatLng == null) return;
     while (_stepIndex < _steps.length - 1) {
@@ -236,8 +223,6 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
     _stepDistanceText = formatMeters(m);
   }
 
-  /// Si el conductor se aleja de la ruta dibujada, se recalcula desde su
-  /// posición actual (hacia el origen o el destino según la fase).
   Future<void> _maybeRecalcRoute() async {
     if (_refetchingRoute ||
         _driverLatLng == null ||
@@ -270,12 +255,10 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
       if (s == null || s == _rideStatus || !mounted) return;
       setState(() => _rideStatus = s);
       if (s == RideStatus.completed) {
-        // Viaje terminado: pasa al flujo de pago (tarjeta o efectivo).
         _goToPaymentFlow();
         return;
       }
       if (_navMode) {
-        // Arrancó la ruta al destino: nueva ruta y cámara de navegación.
         await _loadRoute(_driverLatLng ?? _originLatLng, _destinationLatLng);
         if (_driverLatLng != null && _follow) {
           _guardedAnimate(CameraUpdate.newCameraPosition(CameraPosition(
@@ -321,8 +304,6 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
     });
   }
 
-  /// Recorta la parte ya recorrida de la ruta para dibujar solo lo que falta
-  /// desde la posición del conductor (misma lógica que la vista del conductor).
   void _trimTraveledRoute() {
     if (_driverLatLng == null || _polylinePoints.length < 2) {
       _remaining = _polylinePoints;
@@ -457,10 +438,6 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
                     markerId: const MarkerId('driver'),
                     position: _driverLatLng!,
                     icon: _carIcon!,
-                    // La rotación es absoluta (rumbo real); en modo navegación
-                    // la cámara gira con el mismo rumbo (heading-up) y el carro
-                    // se ve siempre "de frente"; en vista plana (norte-arriba)
-                    // se ve girado según su rumbo real.
                     rotation: _driverBearing,
                     infoWindow: const InfoWindow(title: 'Conductor'),
                     anchor: const Offset(0.5, 0.5),
@@ -491,7 +468,6 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
               },
             ),
           ),
-          // Banner de instrucciones (misma vista que el conductor, sin voz).
           if (_navMode && _steps.isNotEmpty && _driverLatLng != null)
             SafeArea(
               child: Align(
@@ -578,8 +554,6 @@ class _TrackingBottomCardState extends State<_TrackingBottomCard> {
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       child: SafeArea(
         top: false,
-        // El alto se limita y el contenido hace scroll: el panel nunca puede
-        // desbordarse aunque la pantalla sea chica o el contenido crezca.
         child: ConstrainedBox(
           constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.6),

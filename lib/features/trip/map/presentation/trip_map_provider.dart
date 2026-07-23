@@ -21,7 +21,6 @@ class _TripMapScreenState extends State<TripMapScreen> {
   @override
   void initState() {
     super.initState();
-    // Mantiene la pantalla encendida mientras se ve el mapa del viaje.
     WakelockPlus.enable();
     _loadTrip();
   }

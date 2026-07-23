@@ -5,7 +5,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// Resultado devuelto por [MapPickerScreen] al confirmar un punto.
 class PickedPlace {
   final String address;
   final double lat;
@@ -13,8 +12,6 @@ class PickedPlace {
   const PickedPlace(this.address, this.lat, this.lng);
 }
 
-/// Selector de ubicación en el mapa: un pin fijo en el centro y el mapa se
-/// mueve debajo; al detenerse se resuelve la dirección por geocoding inverso.
 class MapPickerScreen extends StatefulWidget {
   final LatLng? initial;
   final String title;
@@ -29,7 +26,6 @@ class MapPickerScreen extends StatefulWidget {
 }
 
 class _MapPickerScreenState extends State<MapPickerScreen> {
-  // Centro por defecto (Tuxtla Gutiérrez) si no llega una posición inicial.
   static const _fallback = LatLng(16.7516, -93.1161);
 
   GoogleMapController? _mapCtrl;
@@ -138,7 +134,6 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             zoomControlsEnabled: false,
             mapToolbarEnabled: false,
           ),
-          // Pin central: se eleva medio ícono para que la punta marque el centro.
           IgnorePointer(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 44),

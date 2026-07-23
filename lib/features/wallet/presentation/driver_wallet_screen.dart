@@ -8,7 +8,7 @@ import 'driver_wallet_provider.dart';
 
 const _monthsAbbr = [
   'ene', 'feb', 'mar', 'abr', 'may', 'jun',
-  'jul', 'ago', 'sep', 'oct', 'nov', 'dic', //
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
 ];
 
 class DriverWalletScreen extends StatefulWidget {
@@ -543,7 +543,6 @@ class _EarningsCardState extends State<_EarningsCard> {
     );
   }
 
-  /// "2026-07-08" → "8" (o "8 jul" en largo); "2026-07" → "jul" (o "jul 2026").
   static String _periodLabel(String period, WalletPeriod p,
       {bool long = false}) {
     final parts = period.split('-');

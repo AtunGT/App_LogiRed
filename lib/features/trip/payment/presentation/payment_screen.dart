@@ -39,8 +39,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   void initState() {
     super.initState();
-    // Con tarjeta el pago lo hace el cliente vía Stripe: se consulta el
-    // payment_status del viaje hasta que el webhook lo marque pagado.
     if (!_isCash) {
       _poll = Timer.periodic(const Duration(seconds: 4), (_) => _checkPaid());
     }

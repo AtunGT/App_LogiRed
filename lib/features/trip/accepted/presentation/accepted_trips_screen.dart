@@ -330,8 +330,6 @@ class _ProposalCard extends StatelessWidget {
 
   String _shortPlace(String full) => full.split(',').first.trim();
 
-  /// Viaje que ya no está abierto (asignado a otro conductor / en curso /
-  /// cerrado) mientras esta propuesta no fue la aceptada.
   bool get _rideTakenByOther =>
       item.status != 1 &&
       item.rideLoaded &&
@@ -495,8 +493,6 @@ class _ProposalCard extends StatelessWidget {
   }
 
   Widget _actionButton(BuildContext context) {
-    // Solo las propuestas aceptadas con su viaje cargado tienen acción; los
-    // viajes completados o cancelados ya no aparecen aquí (van al historial).
     if (item.status != 1 || !item.rideLoaded) return const SizedBox.shrink();
     if (RideStatus.isInCourse(item.rideStatus)) {
       return _btn(context, 'Continuar viaje', true, () => onOpenActive(false),

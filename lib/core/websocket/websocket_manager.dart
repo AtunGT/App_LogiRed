@@ -13,9 +13,6 @@ class WebSocketManager {
   void Function(String)? onFailure;
   void Function()? onClosed;
 
-  /// La API rechaza publish/subscribe mientras el viaje no está "en proceso"
-  /// (status 3), así que la conexión se reintenta hasta que entre o se llame
-  /// a [disconnect].
   static const _retryDelay = Duration(seconds: 4);
 
   void connect(String url) {

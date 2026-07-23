@@ -1,7 +1,5 @@
 import '../../utils/driver_status.dart';
 
-/// La API devuelve "" en vez de null en campos de imagen; normaliza a null
-/// para que los checks `!= null` de la UI sean suficientes.
 String? _nonEmpty(dynamic v) {
   final s = v?.toString().trim();
   return (s == null || s.isEmpty) ? null : s;
@@ -39,12 +37,8 @@ class UserResponse {
   final double? rating;
   final int? totalTrips;
 
-  /// Siempre uno de los valores de [DriverStatus]; nunca null. Si la API no
-  /// manda el campo se resuelve a `DriverStatus.fallback`.
   final String driverStatus;
 
-  /// Motivo que escribio administracion al rechazar o bloquear. Solo tiene
-  /// contenido en esos dos estados.
   final String? rejectReason;
 
   UserResponse({
@@ -75,9 +69,6 @@ class UserResponse {
       imageUrl: _nonEmpty(d['image_url']),
       rating: (d['rating'] as num?)?.toDouble(),
       totalTrips: (d['total_trips'] as num?)?.toInt(),
-      // Ambos viajan en la raiz de `entities.MyProfile`, no anidados bajo el
-      // bloque de conductor. Si faltaran, DriverStatus.parse degrada al
-      // fallback en vez de romper.
       driverStatus: DriverStatus.parse(d['driver_status']),
       rejectReason: _nonEmpty(d['reject_reason']),
     );
@@ -105,8 +96,6 @@ class Trip {
   final int? paymentMethod;
   final int? paymentStatus;
 
-  /// Motivo de cancelación (ver [CancelReason]); solo tiene valor cuando
-  /// `status == RideStatus.cancelled` y la API ya devuelve `cancel_reason`.
   final int? cancelReason;
 
   Trip({
@@ -373,8 +362,6 @@ class DriverProposalItem {
   final int? paymentMethod;
   final int rideStatus;
 
-  /// false cuando no se pudieron obtener los datos del viaje (p. ej. la API
-  /// negó el acceso o el viaje ya no existe); la UI no debe permitir iniciarlo.
   final bool rideLoaded;
 
   DriverProposalItem({

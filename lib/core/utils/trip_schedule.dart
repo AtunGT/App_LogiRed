@@ -27,9 +27,6 @@ class TripSchedule {
     return !DateTime.now().isBefore(at);
   }
 
-  /// true cuando la fecha+hora programada ya quedó estrictamente en el pasado.
-  /// Si no se puede parsear la fecha se considera NO vencido, para no cancelar
-  /// por error un viaje con datos ilegibles.
   static bool isPast(String date, String hour) {
     final at = scheduledAt(date, hour);
     return at != null && DateTime.now().isAfter(at);

@@ -13,8 +13,6 @@ class NavStep {
 }
 
 class DirectionsRoute {
-  /// Geometría detallada de la ruta (concatenación de las polilíneas por
-  /// paso); la `overview_polyline` viene simplificada y se sale de las calles.
   final List<LatLng> points;
   final List<NavStep> steps;
   final double distanceMeters;

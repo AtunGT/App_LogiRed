@@ -2,20 +2,12 @@ import 'package:flutter/material.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/utils/driver_status.dart';
 
-/// Pantalla que ve el conductor cuando no esta aprobado.
-///
-/// Los tres estados comparten estructura (icono, titulo, explicacion, motivo y
-/// acciones) y solo cambian de contenido, asi que se resuelven en un unico
-/// widget en vez de en tres pantallas casi identicas.
 class DriverStatusScreen extends StatelessWidget {
   final String status;
   final String? reason;
 
-  /// Relee `GET /users/me`. En `pending` es la accion principal; en los otros
-  /// dos estados queda disponible como "pull to refresh".
   final Future<void> Function() onRefresh;
 
-  /// Solo se usa en `rejected`.
   final VoidCallback onReapply;
   final VoidCallback onLogout;
 
@@ -45,9 +37,6 @@ class DriverStatusScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                // IntrinsicHeight acota la altura de la Column; sin el, los
-                // Spacer de abajo estarian dentro de un scroll sin limite y
-                // Expanded lanzaria en tiempo de ejecucion.
                 child: IntrinsicHeight(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -59,8 +59,6 @@ class AppRoutes {
         registerClient: (_) => const RegisterClientScreen(),
         registerDriver: (_) => const RegisterDriverScreen(),
         clientMain: (_) => const ClientMainScreen(),
-        // El conductor entra siempre por el gate: es quien decide si ve el mapa
-        // o una pantalla de estado. Nadie debe apuntar a DriverMainScreen.
         driverMain: (_) => const DriverGate(),
         driverReapply: (_) => const DriverReapplyScreen(),
         changePassword: (_) => const ChangePasswordScreen(),

@@ -4,9 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/network/api_service.dart';
 import '../../../core/state/view_state.dart';
 
-/// Un campo de archivo de `POST /users/me/reapply`. La clave es la misma que
-/// usa el alta en `RegisterDriverRepositoryImpl`, asi que el backend recibe el
-/// documento con el nombre que ya espera.
 class ReapplyField {
   final String apiKey;
   final String label;
@@ -37,7 +34,6 @@ const kReapplyVehiclePhotos = [
 const kReapplyProfilePhoto =
     ReapplyField('image', 'Foto de perfil', 'profile.jpg');
 
-/// Campos de texto opcionales del mismo endpoint.
 const kReapplyTextFields = <String, String>{
   'name': 'Nombre',
   'lastname': 'Apellido',
@@ -48,11 +44,6 @@ const kReapplyTextFields = <String, String>{
   'max_capacity': 'Capacidad maxima',
 };
 
-/// Reenvio parcial de documentos de un conductor rechazado.
-///
-/// El endpoint conserva lo que no se manda, asi que solo se envia lo que el
-/// conductor toco. Enviar todo de nuevo lo obligaria a repetir fotos que ya
-/// estaban bien.
 class DriverReapplyProvider extends ChangeNotifier with ViewStateMixin {
   final ApiService _api;
   final _picker = ImagePicker();
@@ -67,7 +58,6 @@ class DriverReapplyProvider extends ChangeNotifier with ViewStateMixin {
   String? pathOf(String apiKey) => _files[apiKey];
   String textOf(String apiKey) => _texts[apiKey] ?? '';
 
-  /// Cuantos cambios lleva preparados. Con cero, el envio no tiene sentido.
   int get changeCount =>
       _files.length + _texts.values.where((v) => v.trim().isNotEmpty).length;
 

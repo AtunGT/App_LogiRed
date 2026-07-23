@@ -27,15 +27,11 @@ class AvailableTripsProvider extends ChangeNotifier with ViewStateMixin {
     notifyListeners();
   }
 
-  /// Viaje publicado, sin conductor y con su fecha/hora ya vencida.
   bool _isExpired(Trip t) =>
       t.status == RideStatus.pending &&
       t.driverId == null &&
       TripSchedule.isPast(t.date, t.hour);
 
-  /// Cancela en la API (best-effort) los viajes vencidos. `cancel_reason` deja
-  /// registrado que fue por expiración; el backend degrada e ignora el campo
-  /// mientras no esté desplegado.
   Future<void> _cancelExpired(List<Trip> expired) async {
     await Future.wait(expired.map((t) async {
       try {
@@ -77,9 +73,6 @@ class AvailableTripsProvider extends ChangeNotifier with ViewStateMixin {
       final all = await _repository.getAvailableTrips(city);
       final live = all.where((t) => !_proposedIds.contains(t.id)).toList();
 
-      // Viajes cuya fecha/hora ya pasó y siguen sin conductor: se cancelan
-      // automáticamente (por expiración) y no se muestran. La cancelación real
-      // en la API se dispara en segundo plano para no retrasar la lista.
       final expired = live.where(_isExpired).toList();
       if (expired.isNotEmpty) {
         final expiredIds = expired.map((t) => t.id).toSet();

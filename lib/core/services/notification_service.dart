@@ -12,8 +12,6 @@ const _primaryColor = Color(0xFF1D6B50);
 
 final _localNotif = FlutterLocalNotificationsPlugin();
 
-/// Tipos de push con los que administracion avisa un cambio de estado del
-/// conductor. Llegan en `data['type']` junto con `reason` en los dos ultimos.
 const _driverStatusTypes = {
   'driver_approved',
   'driver_rejected',
@@ -26,12 +24,6 @@ class NotificationService {
   static StreamSubscription<String>? _tokenRefreshSub;
   static String? _pendingRoute;
 
-  /// Se incrementa cada vez que llega un push de cambio de estado del
-  /// conductor. `DriverGate` lo escucha para releer `GET /users/me` y cambiar
-  /// de pantalla sin que el usuario tenga que reiniciar la app.
-  ///
-  /// Se notifica el evento, no el estado: el push no es fuente de verdad, solo
-  /// la señal de que hay que volver a preguntarle a la API.
   static final ValueNotifier<int> driverStatusRevision = ValueNotifier<int>(0);
 
   static void _checkDriverStatusChange(RemoteMessage msg) {
@@ -197,8 +189,6 @@ class NotificationService {
   static void _onLocalTap(NotificationResponse r) => _navigate(r.payload);
 
   static void _onRemoteTap(RemoteMessage msg) {
-    // Abrir la app desde el push tambien cuenta como señal: el estado pudo
-    // cambiar mientras estaba cerrada.
     _checkDriverStatusChange(msg);
     _navigate(msg.data['route'] as String?);
   }

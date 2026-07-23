@@ -43,7 +43,6 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
   @override
   void initState() {
     super.initState();
-    // Mantiene la pantalla encendida durante todo el viaje.
     WakelockPlus.enable();
   }
 
@@ -61,10 +60,6 @@ class _ActiveTripScreenState extends State<ActiveTripScreen> {
       child: Consumer<ActiveTripProvider>(
         builder: (context, provider, _) {
           final colorScheme = Theme.of(context).colorScheme;
-          // El conductor no puede salir del viaje en curso hasta completarlo
-          // (al finalizar se navega a /payment con pushReplacement). Mientras
-          // el viaje esté cargado, se bloquean el botón de retroceso y el gesto
-          // del sistema. En carga/error sí puede volver para no quedar atrapado.
           final lockNavigation = widget.isDriver && provider.trip != null;
           return PopScope(
             canPop: !lockNavigation,
@@ -128,8 +123,6 @@ class _NavBodyState extends State<_NavBody> {
   String? _durationText;
   String? _distanceText;
 
-  /// [_suffixMeters]\[i\] = metros desde _route[i] hasta el final; permite
-  /// recalcular la distancia/tiempo restantes en cada fix sin recorrer todo.
   List<double> _suffixMeters = [];
   double _routeDistanceMeters = 0;
   double _routeDurationSecs = 0;
@@ -140,8 +133,6 @@ class _NavBodyState extends State<_NavBody> {
 
   BitmapDescriptor? _carIcon;
 
-  /// Rumbo real de avance del vehículo (curso GPS); orienta el ícono del carro.
-  /// [_bearing] es el rumbo del dispositivo (brújula) que gira el mapa heading-up.
   double _travelBearing = 0;
 
   double? _lastLat, _lastLng;
@@ -259,7 +250,6 @@ class _NavBodyState extends State<_NavBody> {
     _lastTime = now;
     _current = LatLng(lat, lng);
     _trimTraveledRoute();
-    // El curso GPS orienta el sprite del carro; el mapa gira con la brújula.
     if (pos.speed > 0.3 && pos.heading >= 0 && pos.heading <= 360) {
       _travelBearing = pos.heading;
     } else if (bearing != null) {
@@ -321,8 +311,6 @@ class _NavBodyState extends State<_NavBody> {
     _remaining = [cur, ...ahead];
   }
 
-  /// Si el conductor se aleja de la ruta trazada, la recalcula desde su
-  /// posición actual hacia el objetivo de la fase (origen o destino).
   Future<void> _maybeRecalcRoute() async {
     if (_refetchingRoute ||
         _phase == _NavPhase.atOrigin ||
@@ -403,7 +391,6 @@ class _NavBodyState extends State<_NavBody> {
     }
   }
 
-  /// Recalcula el "X min · X km restantes" con cada fix del GPS.
   void _updateRemainingEta() {
     if (_current == null ||
         _route.length < 2 ||
@@ -491,7 +478,6 @@ class _NavBodyState extends State<_NavBody> {
     if (_muted) _tts.stop();
   }
 
-  /// Diferencia angular más corta entre dos rumbos, en el rango [-180, 180].
   double _shortestDelta(double from, double to) =>
       ((to - from + 540) % 360) - 180;
 
@@ -501,12 +487,11 @@ class _NavBodyState extends State<_NavBody> {
       final h = (e.heading! + 360) % 360;
       final delta = _shortestDelta(_bearing, h);
       if (delta.abs() < 1) return;
-      // Suavizado para que el mapa gire fluido y no a saltos con el teléfono.
       _bearing = (_bearing + delta * 0.35 + 360) % 360;
       if (_follow && _current != null && _phase != _NavPhase.atOrigin) {
         _throttledCameraRotate();
       }
-      if (mounted) setState(() {}); // reevalúa el sprite del carro
+      if (mounted) setState(() {});
     });
   }
 
@@ -526,8 +511,6 @@ class _NavBodyState extends State<_NavBody> {
       _phase = _NavPhase.atOrigin;
       _follow = false;
     });
-    // Notifica al cliente que el conductor ya está en el origen (status 7);
-    // si el backend aún no soporta el estado, la fase local sigue igual.
     widget.provider.updateStatus(RideStatus.atOrigin);
     await _loadRouteForPhase();
     _fitBounds();
@@ -947,8 +930,6 @@ class _BottomCardState extends State<_BottomCard> {
       borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
       child: SafeArea(
         top: false,
-        // Alto limitado + contenido con scroll para que el panel nunca se
-        // desborde; el slider de confirmación queda siempre visible abajo.
         child: ConstrainedBox(
           constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.6),

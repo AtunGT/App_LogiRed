@@ -69,8 +69,6 @@ class RateDriverProvider extends ChangeNotifier with ViewStateMixin {
         if (_selectedTags.isNotEmpty) _selectedTags.join(', '),
       ].join(' · ');
 
-      // POST /reviews no liga la reseña al viaje: el pasajero sale del token
-      // y el conductor va en `iduser` (así lo nombra el backend).
       await _api.createReview({
         'iduser': driverId,
         'rating': _stars,

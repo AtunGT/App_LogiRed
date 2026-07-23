@@ -99,9 +99,6 @@ class _RequestTripScreenState extends State<RequestTripScreen> {
       context: context,
       initialTime: TimeOfDay.now(),
       initialEntryMode: TimePickerEntryMode.dial,
-      // El formato 12h/AM-PM en español lo aporta el delegado de localización
-      // (EsMaterialLocalizations12hDelegate). Forzamos alwaysUse24HourFormat a
-      // false para que un dispositivo configurado en 24h no lo convierta.
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
         child: child!,
@@ -109,7 +106,6 @@ class _RequestTripScreenState extends State<RequestTripScreen> {
     );
     if (picked == null) return;
 
-    // Si el viaje es para hoy, no permitir una hora que ya pasó.
     if (_isToday(provider.date)) {
       final now = TimeOfDay.now();
       final pickedMinutes = picked.hour * 60 + picked.minute;

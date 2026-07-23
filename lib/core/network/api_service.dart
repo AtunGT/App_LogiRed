@@ -38,9 +38,6 @@ class ApiService {
   Future<Response> updateUser(FormData data) =>
       _dio.put('users/me', data: data);
 
-  /// Re-postulacion de un conductor rechazado. Todos los campos son opcionales:
-  /// solo se envia lo que el conductor corrigio, el resto se conserva. La API
-  /// devuelve su `driver_status` a `pending`.
   Future<Response> reapplyDriver(FormData data) =>
       _dio.post('users/me/reapply', data: data);
 
@@ -68,7 +65,6 @@ class ApiService {
   Future<Response> updateRideStatus(int id, Map<String, dynamic> data) =>
       _dio.put('rides/$id/status', data: data);
 
-  /// El conductor confirma que recibió el pago en efectivo del viaje.
   Future<Response> confirmCashPayment(int id) =>
       _dio.put('rides/$id/payment/confirm');
 

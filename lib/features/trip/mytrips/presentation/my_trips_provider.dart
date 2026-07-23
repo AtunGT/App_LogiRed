@@ -21,8 +21,6 @@ class MyTripsProvider extends ChangeNotifier with ViewStateMixin {
     try {
       final all = await _repository.getMyTrips();
 
-      // Viajes propios ya vencidos y sin conductor: se cancelan por expiración
-      // en segundo plano y se ocultan de inmediato de las pestañas activas.
       final expired = all.where(_isExpired).toList();
       if (expired.isNotEmpty) {
         final expiredIds = expired.map((t) => t.id).toSet();
@@ -39,7 +37,6 @@ class MyTripsProvider extends ChangeNotifier with ViewStateMixin {
     notifyListeners();
   }
 
-  /// Viaje publicado, sin conductor y con su fecha/hora ya vencida.
   bool _isExpired(Trip t) =>
       t.status == RideStatus.pending &&
       t.driverId == null &&

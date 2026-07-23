@@ -19,7 +19,6 @@ class PaymentMethodInfo {
       isCard(method) ? Icons.credit_card_rounded : Icons.payments_outlined;
 }
 
-/// Estado de pago del viaje (columna `payment_status` de rides).
 class PaymentStatusInfo {
   const PaymentStatusInfo._();
 

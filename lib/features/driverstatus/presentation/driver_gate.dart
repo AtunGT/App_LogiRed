@@ -8,12 +8,6 @@ import '../../main/driver_main_screen.dart';
 import 'driver_status_provider.dart';
 import 'driver_status_screen.dart';
 
-/// Puerta de entrada del conductor.
-///
-/// Sustituye a `DriverMainScreen` en la ruta `driverMain` para que los dos
-/// puntos que navegan ahi (el arranque en `main.dart` y el login) no tengan
-/// que duplicar la consulta de estado. Solo deja pasar al mapa si
-/// `driver_status` es `approved`.
 class DriverGate extends StatefulWidget {
   const DriverGate({super.key});
 
@@ -42,7 +36,6 @@ class _DriverGateState extends State<DriverGate> {
     super.dispose();
   }
 
-  /// Llego un push de administracion: el estado cambio, hay que releerlo.
   void _onPushedChange() {
     if (mounted) _provider.refresh();
   }
@@ -59,8 +52,6 @@ class _DriverGateState extends State<DriverGate> {
 
   Future<void> _openReapply() async {
     await Navigator.pushNamed(context, AppRoutes.driverReapply);
-    // Al volver, el estado deberia ser `pending`; se confirma con la API en
-    // vez de asumirlo.
     if (mounted) await _provider.refresh();
   }
 

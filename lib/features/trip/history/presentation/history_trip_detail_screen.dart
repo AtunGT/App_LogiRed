@@ -32,7 +32,6 @@ class _HistoryTripDetailScreenState extends State<HistoryTripDetailScreen> {
 
   bool get _isCompleted => _trip.status == RideStatus.completed;
 
-  /// El endpoint solo trae coordenadas útiles en viajes completados.
   bool get _hasCoords =>
       !(_trip.originLat == 0 && _trip.originLng == 0) &&
       !(_trip.destinationLat == 0 && _trip.destinationLng == 0);

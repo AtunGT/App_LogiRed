@@ -6,9 +6,6 @@ import '../../../../core/network/model/models.dart';
 import '../../../../core/utils/payment_method.dart';
 import '../../rating/presentation/rate_driver_screen.dart';
 
-/// Pago en efectivo: el cliente paga en mano y espera a que el conductor
-/// confirme la recepción; cuando el backend marca `payment_status = 2` se
-/// muestra "Tu pago se confirmó" y se pasa a calificar al conductor.
 class CashPaymentWaitScreen extends StatefulWidget {
   final Trip trip;
   final Proposal proposal;

@@ -28,8 +28,6 @@ class _SlideToConfirmState extends State<SlideToConfirm> {
   bool _dragging = false;
   bool _done = false;
 
-  /// Offset entre el dedo y el borde izquierdo del pulgar al agarrarlo;
-  /// null cuando el arrastre no inició sobre el pulgar.
   double? _grabOffset;
 
   static const double _h = 58;
@@ -83,13 +81,10 @@ class _SlideToConfirmState extends State<SlideToConfirm> {
               ? null
               : (d) {
                   if (_grabOffset == null) return;
-                  // Posición absoluta del dedo: no se pierde recorrido
-                  // aunque el gesto consuma los primeros píxeles.
                   setState(() {
                     _dragX = (d.localPosition.dx - _grabOffset! - _pad)
                         .clamp(0.0, maxX);
                   });
-                  // Confirma en cuanto el pulgar toca el final, sin soltar.
                   if (_dragX >= maxX - 1) _confirm(maxX);
                 },
           onHorizontalDragEnd: (!active || _done)

@@ -482,7 +482,6 @@ class _HistoryCardState extends State<_HistoryCard> {
             ),
           ] else if (trip.status != RideStatus.cancelled &&
               _proposal != null) ...[
-            // Rol conductor: la propuesta trae el precio pero no sus datos.
             const Divider(height: 18),
             Row(
               children: [

@@ -1,9 +1,6 @@
 import '../../../core/di/service_locator.dart';
 import '../../../core/network/model/models.dart';
 
-/// Propuesta aceptada de un viaje según el rol del usuario: el cliente puede
-/// consultarlas por viaje, pero al conductor `GET /proposals/ride/{id}` le
-/// devuelve 403, así que él la busca entre sus propias propuestas.
 Future<Proposal?> fetchAcceptedProposal(int rideId) async {
   final userType = await sl.tokenManager.getUserType() ?? 1;
   if (userType == 2) {

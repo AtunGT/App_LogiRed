@@ -3,14 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
-/// Localización de Material en español idéntica a la de Flutter, pero con el
-/// formato de hora en **12 horas con AM/PM** en lugar de 24 horas.
-///
-/// Flutter fija el español a 24h a nivel de idioma: `MaterialLocalizationEs`
-/// devuelve `TimeOfDayFormat.H_colon_mm`, y ningún país (`es_MX`, `es_CO`, …)
-/// lo cambia. Esta subclase solo sobrescribe ese formato para que el selector
-/// de hora muestre 12h con AM/PM (a. m. / p. m.), manteniendo el resto de los
-/// textos en español.
 class _MaterialLocalizationEs12h extends MaterialLocalizationEs {
   const _MaterialLocalizationEs12h({
     required super.fullYearFormat,
@@ -28,8 +20,6 @@ class _MaterialLocalizationEs12h extends MaterialLocalizationEs {
   TimeOfDayFormat get timeOfDayFormatRaw => TimeOfDayFormat.h_colon_mm_space_a;
 }
 
-/// Delegado que reemplaza a [GlobalMaterialLocalizations.delegate] para el
-/// español, entregando [_MaterialLocalizationEs12h] (12h con AM/PM).
 class EsMaterialLocalizations12hDelegate
     extends LocalizationsDelegate<MaterialLocalizations> {
   const EsMaterialLocalizations12hDelegate();

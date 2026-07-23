@@ -4,10 +4,6 @@ import 'package:provider/provider.dart';
 import '../../../core/network/api_service.dart';
 import 'driver_reapply_provider.dart';
 
-/// Reenvio de documentos para un conductor rechazado.
-///
-/// Muestra todo lo que se puede corregir, pero no obliga a nada: el conductor
-/// adjunta solo aquello que administracion le señalo en el motivo del rechazo.
 class DriverReapplyScreen extends StatelessWidget {
   const DriverReapplyScreen({super.key});
 

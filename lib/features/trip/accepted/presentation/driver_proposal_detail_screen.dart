@@ -32,8 +32,6 @@ class DriverProposalDetailScreen extends StatelessWidget {
     }
   }
 
-  /// Viaje que ya no está abierto (asignado a otro conductor / en curso /
-  /// cerrado) mientras esta propuesta no fue la aceptada.
   bool get _rideTakenByOther =>
       item.status != 1 &&
       item.rideLoaded &&

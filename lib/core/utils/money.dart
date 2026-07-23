@@ -13,7 +13,6 @@ class Money {
 
   static String mxn(double v) => '${format(v)} MXN';
 
-  /// Con signo explícito: "+$450" / "−$50".
   static String signed(double v) =>
       v < 0 ? '−${format(v.abs())}' : '+${format(v)}';
 }

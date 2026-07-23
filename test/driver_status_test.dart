@@ -17,8 +17,6 @@ void main() {
     });
 
     test('null, vacio y desconocido caen en el fallback', () {
-      // Si el backend aun no manda el campo, el conductor debe seguir
-      // trabajando en vez de quedar encerrado.
       expect(DriverStatus.parse(null), DriverStatus.approved);
       expect(DriverStatus.parse(''), DriverStatus.approved);
       expect(DriverStatus.parse('suspended'), DriverStatus.approved);
@@ -87,7 +85,6 @@ void main() {
     });
 
     testWidgets('renderiza en pantalla corta sin desbordar', (tester) async {
-      // El caso que rompia el Spacer dentro del scroll.
       tester.view.physicalSize = const Size(360, 480);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);

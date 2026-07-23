@@ -15,8 +15,6 @@ class DriverWalletProvider extends ChangeNotifier with ViewStateMixin {
 
   bool isLoadingMore = false;
 
-  /// Falló solo una parte: banner con el detalle, el resto se muestra.
-  /// (`error`, del mixin, cubre el caso "todo falló": pantalla completa.)
   String? partialError;
   bool _loadedOnce = false;
 
@@ -33,8 +31,6 @@ class DriverWalletProvider extends ChangeNotifier with ViewStateMixin {
 
   bool get hasMore => movements.length < totalMovements;
 
-  /// Entradas del periodo activo con los huecos rellenados en cero:
-  /// últimos 7 días o últimos 6 meses, en orden cronológico.
   List<WalletSummaryEntry> get chartEntries {
     final now = DateTime.now();
     if (period == WalletPeriod.day) {

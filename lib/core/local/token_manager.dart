@@ -42,11 +42,6 @@ class TokenManager {
     await prefs.setString(_cityKey, cityWork);
   }
 
-  /// Ultimo `driver_status` confirmado por la API.
-  ///
-  /// Se cachea para que un fallo de red al abrir la app no cambie lo que ve el
-  /// conductor: sin esto, un bloqueado recuperaria el acceso al mapa con solo
-  /// quedarse sin señal.
   Future<String?> getDriverStatus() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_driverStatusKey);
