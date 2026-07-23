@@ -113,16 +113,6 @@ class _AcceptedTripsScreenState extends State<AcceptedTripsScreen> {
                                   provider, ProposalFilter.inProgress),
                               colorScheme: colorScheme,
                             ),
-                            const SizedBox(width: 8),
-                            _FilterChip(
-                              label: 'No seleccionadas',
-                              count: provider.countNotSelected,
-                              selected:
-                                  provider.filter == ProposalFilter.notSelected,
-                              onTap: () => _selectFilter(
-                                  provider, ProposalFilter.notSelected),
-                              colorScheme: colorScheme,
-                            ),
                           ],
                         ),
                       ),
@@ -149,9 +139,7 @@ class _AcceptedTripsScreenState extends State<AcceptedTripsScreen> {
           ? 'No tienes propuestas pendientes'
           : provider.filter == ProposalFilter.accepted
               ? 'No tienes viajes reservados'
-              : provider.filter == ProposalFilter.inProgress
-                  ? 'No tienes viajes en curso'
-                  : 'No tienes propuestas sin seleccionar';
+              : 'No tienes viajes en curso';
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -345,6 +333,19 @@ class _ProposalCard extends StatelessWidget {
     }
     if (item.status == 3) {
       return ('Rechazada', const Color(0xFFFFEBEE), const Color(0xFFC62828));
+    }
+    if (item.rideStatus == RideStatus.cancelled) {
+      return (
+        item.cancelReason == CancelReason.expired
+            ? 'Viaje expirado'
+            : 'Viaje cancelado',
+        const Color(0xFFECEFF1),
+        const Color(0xFF546E7A)
+      );
+    }
+    if (item.rideGone) {
+      return ('No disponible', const Color(0xFFECEFF1),
+          const Color(0xFF546E7A));
     }
     if (_rideTakenByOther) {
       return ('No seleccionada', const Color(0xFFECEFF1),

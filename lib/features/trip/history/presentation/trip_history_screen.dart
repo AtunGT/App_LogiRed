@@ -364,7 +364,9 @@ class _HistoryCardState extends State<_HistoryCard> {
             children: [
               Expanded(
                 child: Text(
-                  '${_shortPlace(trip.origin)} → ${_shortPlace(trip.destination)}',
+                  trip.destination.isEmpty
+                      ? _shortPlace(trip.origin)
+                      : '${_shortPlace(trip.origin)} → ${_shortPlace(trip.destination)}',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -399,21 +401,26 @@ class _HistoryCardState extends State<_HistoryCard> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            '${_formatDate(trip.date)} · ${_formatHour(trip.hour)} hrs',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            weightStr,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-            overflow: TextOverflow.ellipsis,
-          ),
+          if (trip.date.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              '${_formatDate(trip.date)} · ${_formatHour(trip.hour)} hrs',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+          if (trip.approxWeight > 0 ||
+              (trip.description?.isNotEmpty ?? false)) ...[
+            const SizedBox(height: 2),
+            Text(
+              weightStr,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
           if (trip.status != RideStatus.cancelled && driverName != null) ...[
             const Divider(height: 18),
             Row(

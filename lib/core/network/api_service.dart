@@ -41,6 +41,9 @@ class ApiService {
   Future<Response> reapplyDriver(FormData data) =>
       _dio.post('users/me/reapply', data: data);
 
+  Future<Response> requestPasswordResetCode(Map<String, dynamic> data) =>
+      _dio.post('users/password-reset/request', data: data);
+
   Future<Response> resetPassword(Map<String, dynamic> data) =>
       _dio.put('users/password-reset', data: data);
 

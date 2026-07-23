@@ -65,11 +65,26 @@ class LoginRepositoryImpl implements LoginRepository {
 
       await NotificationService.registerDeviceToken();
       return LoginSuccess(userType: userType, token: token);
-    } on DioException {
-      return LoginError(message: 'Conéctate a internet e intenta de nuevo');
+    } on DioException catch (e) {
+      // Sin respuesta del servidor = problema de red real.
+      if (e.response == null) {
+        return LoginError(message: 'Conéctate a internet e intenta de nuevo');
+      }
+      final code = e.response!.statusCode;
+      if (code == 401 || code == 400) {
+        return LoginError(message: 'Correo o contraseña incorrectos');
+      }
+      return LoginError(
+          message: 'El servidor no está disponible. Intenta más tarde');
     } on FirebaseAuthException catch (e) {
       if (e.code == 'network-request-failed') {
         return LoginError(message: 'Conéctate a internet e intenta de nuevo');
+      }
+      if (e.code == 'wrong-password' ||
+          e.code == 'user-not-found' ||
+          e.code == 'invalid-credential' ||
+          e.code == 'INVALID_LOGIN_CREDENTIALS') {
+        return LoginError(message: 'Correo o contraseña incorrectos');
       }
       return LoginError(message: 'Error de autenticación. Intenta de nuevo');
     } catch (e) {
@@ -133,8 +148,17 @@ class LoginRepositoryImpl implements LoginRepository {
 
       await NotificationService.registerDeviceToken();
       return LoginSuccess(userType: userType, token: token);
-    } on DioException {
-      return LoginError(message: 'Conéctate a internet e intenta de nuevo');
+    } on DioException catch (e) {
+      if (e.response == null) {
+        return LoginError(message: 'Conéctate a internet e intenta de nuevo');
+      }
+      if (e.response!.statusCode == 404) {
+        return LoginError(
+            message:
+                'Esta cuenta de Google no está registrada. Crea una cuenta primero');
+      }
+      return LoginError(
+          message: 'El servidor no está disponible. Intenta más tarde');
     } on FirebaseAuthException catch (e) {
       if (e.code == 'network-request-failed') {
         return LoginError(message: 'Conéctate a internet e intenta de nuevo');

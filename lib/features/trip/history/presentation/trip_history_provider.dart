@@ -24,6 +24,15 @@ class TripHistoryProvider extends ChangeNotifier with ViewStateMixin {
       trips = userType == 2
           ? await _repository.getDriverTrips()
           : await _repository.getClientTrips();
+      if (userType == 2) {
+        // Viajes expirados a los que propuso y nunca se le asignaron:
+        // la API no los devuelve en /rides/history, se completan aquí.
+        try {
+          final expired = await _repository
+              .getExpiredProposalTrips(trips.map((t) => t.id).toSet());
+          trips = [...trips, ...expired];
+        } catch (_) {}
+      }
       filteredTrips = trips;
     } catch (e) {
       error = 'Error al cargar el historial';

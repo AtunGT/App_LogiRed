@@ -14,7 +14,8 @@ const _apiKey = googleMapsApiKey;
 
 class RequestTripScreen extends StatefulWidget {
   final bool isActive;
-  const RequestTripScreen({this.isActive = false, super.key});
+  final void Function(int index)? onNavigate;
+  const RequestTripScreen({this.isActive = false, this.onNavigate, super.key});
 
   @override
   State<RequestTripScreen> createState() => _RequestTripScreenState();
@@ -171,19 +172,20 @@ class _RequestTripScreenState extends State<RequestTripScreen> {
       create: (c) => RequestTripProvider(c.read<ApiService>()),
       child: Consumer<RequestTripProvider>(
         builder: (context, provider, _) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (provider.success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text(
-                      '¡Viaje publicado! Los conductores recibirán la notificación.'),
-                  backgroundColor: colorScheme.primary,
+          if (provider.success) {
+            return Scaffold(
+              backgroundColor: colorScheme.surfaceContainerLow,
+              body: SafeArea(
+                child: _TripPublishedView(
+                  onBack: () {
+                    _clearFields();
+                    provider.resetSuccess();
+                    widget.onNavigate?.call(2);
+                  },
                 ),
-              );
-              _clearFields();
-              provider.success = false;
-            }
-          });
+              ),
+            );
+          }
 
           return Scaffold(
             backgroundColor: colorScheme.surfaceContainerLow,
@@ -789,6 +791,63 @@ class _PublishHintDialogState extends State<_PublishHintDialog> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TripPublishedView extends StatelessWidget {
+  final VoidCallback onBack;
+  const _TripPublishedView({required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: colorScheme.primaryContainer,
+              child: Icon(Icons.check, size: 44, color: colorScheme.primary),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              '¡Viaje publicado!',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Los conductores de tu zona verán tu viaje y te '
+              'notificaremos cuando recibas propuestas.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onBack,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  elevation: 0,
+                ),
+                child: const Text('Volver a mis viajes',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

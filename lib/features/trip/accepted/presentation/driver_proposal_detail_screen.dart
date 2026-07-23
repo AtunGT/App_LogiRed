@@ -48,6 +48,19 @@ class DriverProposalDetailScreen extends StatelessWidget {
     if (item.status == 3) {
       return ('Rechazada', const Color(0xFFFFEBEE), const Color(0xFFC62828));
     }
+    if (item.rideStatus == RideStatus.cancelled) {
+      return (
+        item.cancelReason == CancelReason.expired
+            ? 'Viaje expirado'
+            : 'Viaje cancelado',
+        const Color(0xFFECEFF1),
+        const Color(0xFF546E7A)
+      );
+    }
+    if (item.rideGone) {
+      return ('No disponible', const Color(0xFFECEFF1),
+          const Color(0xFF546E7A));
+    }
     if (_rideTakenByOther) {
       return ('No seleccionada', const Color(0xFFECEFF1),
           const Color(0xFF546E7A));
@@ -246,9 +259,15 @@ class DriverProposalDetailScreen extends StatelessWidget {
                     : 'El cliente reservó este viaje contigo.'
                 : item.status == 3
                     ? 'El cliente rechazó esta propuesta.'
-                    : _rideTakenByOther
-                        ? 'El viaje ya fue asignado a otro conductor.'
-                        : 'Tu propuesta está a la espera de que el cliente la acepte.',
+                    : item.rideStatus == RideStatus.cancelled
+                        ? (item.cancelReason == CancelReason.expired
+                            ? 'El viaje expiró porque nadie lo tomó a tiempo.'
+                            : 'El cliente canceló este viaje.')
+                        : item.rideGone
+                            ? 'Este viaje ya no está disponible.'
+                            : _rideTakenByOther
+                                ? 'El viaje ya fue asignado a otro conductor.'
+                                : 'Tu propuesta está a la espera de que el cliente la acepte.',
             textAlign: TextAlign.center,
             style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
           ),

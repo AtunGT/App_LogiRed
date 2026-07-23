@@ -59,7 +59,10 @@ class _ClientMainScreenState extends State<ClientMainScreen> {
         onNavigate: (i) => setState(() => _currentIndex = i),
         isActive: _currentIndex == 0,
       ),
-      RequestTripScreen(isActive: _currentIndex == 1),
+      RequestTripScreen(
+        isActive: _currentIndex == 1,
+        onNavigate: (i) => setState(() => _currentIndex = i),
+      ),
       MyTripsScreen(isActive: _currentIndex == 2),
       TripHistoryScreen(isActive: _currentIndex == 3),
       AccountScreen(isActive: _currentIndex == 4),

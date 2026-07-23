@@ -21,7 +21,6 @@ class DriverMainScreen extends StatefulWidget {
 
 class _DriverMainScreenState extends State<DriverMainScreen> {
   int _currentIndex = 0;
-  int _proposalCount = 0;
 
   static const _labels = [
     'Inicio',
@@ -39,38 +38,12 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
     (Icons.person_outline, Icons.person),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _loadProposalCount();
-  }
-
-  Future<void> _loadProposalCount() async {
-    final api = context.read<ApiService>();
-    try {
-      final res = await api.getMyAcceptedTrips();
-      final list = (res.data['rides'] ?? res.data) as List? ?? [];
-      if (mounted) setState(() => _proposalCount = list.length);
-    } catch (_) {}
-  }
-
   List<NavigationDestination> get _navDestinations =>
       List.generate(_labels.length, (i) {
         final (outlinedIcon, filledIcon) = _icons[i];
-        final showBadge = i == 2 && _proposalCount > 0;
         return NavigationDestination(
-          icon: showBadge
-              ? Badge(
-                  label: Text('$_proposalCount'),
-                  child: Icon(outlinedIcon),
-                )
-              : Icon(outlinedIcon),
-          selectedIcon: showBadge
-              ? Badge(
-                  label: Text('$_proposalCount'),
-                  child: Icon(filledIcon),
-                )
-              : Icon(filledIcon),
+          icon: Icon(outlinedIcon),
+          selectedIcon: Icon(filledIcon),
           label: _labels[i],
         );
       });
@@ -78,20 +51,9 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
   List<NavigationRailDestination> get _railDestinations =>
       List.generate(_labels.length, (i) {
         final (outlinedIcon, filledIcon) = _icons[i];
-        final showBadge = i == 2 && _proposalCount > 0;
         return NavigationRailDestination(
-          icon: showBadge
-              ? Badge(
-                  label: Text('$_proposalCount'),
-                  child: Icon(outlinedIcon),
-                )
-              : Icon(outlinedIcon),
-          selectedIcon: showBadge
-              ? Badge(
-                  label: Text('$_proposalCount'),
-                  child: Icon(filledIcon),
-                )
-              : Icon(filledIcon),
+          icon: Icon(outlinedIcon),
+          selectedIcon: Icon(filledIcon),
           label: Text(_labels[i]),
         );
       });

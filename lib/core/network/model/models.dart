@@ -361,8 +361,13 @@ class DriverProposalItem {
   final String clientName;
   final int? paymentMethod;
   final int rideStatus;
+  final int? cancelReason;
 
   final bool rideLoaded;
+
+  /// El viaje asociado ya no se puede consultar (la API respondió error);
+  /// distinto de un fallo de red, que deja [rideLoaded] en false sin marcarlo.
+  final bool rideGone;
 
   DriverProposalItem({
     required this.id,
@@ -379,7 +384,9 @@ class DriverProposalItem {
     required this.clientName,
     this.paymentMethod,
     this.rideStatus = 0,
+    this.cancelReason,
     this.rideLoaded = true,
+    this.rideGone = false,
   });
 
   factory DriverProposalItem.fromJson(Map<String, dynamic> json) {

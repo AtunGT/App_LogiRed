@@ -211,7 +211,7 @@ class _ProposalDetailScreenState extends State<ProposalDetailScreen> {
                 children: [
                   _SectionTitle(
                       icon: Icons.directions_car_outlined,
-                      label: 'VehÃ­culo',
+                      label: 'Vehículo',
                       colorScheme: colorScheme),
                   const SizedBox(height: 12),
                   _InfoRow(label: 'Modelo', value: '${car.brand} ${car.model}'),

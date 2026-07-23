@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:screen_protector/screen_protector.dart';
+import '../../../../core/routes/app_routes.dart';
 import '../../../../core/utils/responsive.dart';
 import '../domain/model/login_result.dart';
 import '../domain/repository/login_repository.dart';
@@ -375,6 +376,25 @@ class _LoginForm extends StatelessWidget {
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRoutes.forgotPassword),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 36),
+                ),
+                child: Text(
+                  '¿Olvidaste tu contraseña?',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: colorScheme.primary,
+                  ),
+                ),
               ),
             ),
             if (provider.error != null) ...[

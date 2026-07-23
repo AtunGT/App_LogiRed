@@ -1,11 +1,12 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../core/network/model/models.dart';
 import '../../../../core/state/view_state.dart';
 import '../../../../core/utils/ride_status.dart';
 
-enum ProposalFilter { pending, accepted, inProgress, notSelected }
+enum ProposalFilter { pending, accepted, inProgress }
 
 const int kProposalAccepted = 1;
 const int kProposalRejected = 3;
@@ -22,8 +23,11 @@ bool _rideTakenByOther(DriverProposalItem p) =>
     p.rideStatus != 0 &&
     p.rideStatus != RideStatus.pending;
 
-bool _isNotSelected(DriverProposalItem p) =>
-    p.status == kProposalRejected || _rideTakenByOther(p);
+/// Propuestas descartadas: rechazadas, de viajes tomados por otro conductor,
+/// o de viajes que ya no se pueden consultar (expirados/cancelados). No se
+/// muestran en ninguna pestaña; los viajes expirados aparecen en el Historial.
+bool _isDiscarded(DriverProposalItem p) =>
+    p.status == kProposalRejected || _rideTakenByOther(p) || p.rideGone;
 
 class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
   final ApiService _api;
@@ -44,7 +48,7 @@ class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
   }
 
   bool _isPending(DriverProposalItem p) =>
-      p.status != kProposalAccepted && !_isNotSelected(p);
+      p.status != kProposalAccepted && !_isDiscarded(p);
 
   bool _isAccepted(DriverProposalItem p) =>
       p.status == kProposalAccepted &&
@@ -63,15 +67,12 @@ class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
         return _all.where(_isAccepted).toList();
       case ProposalFilter.inProgress:
         return _all.where(_isInProgress).toList();
-      case ProposalFilter.notSelected:
-        return _all.where(_isNotSelected).toList();
     }
   }
 
   int get countPending => _all.where(_isPending).length;
   int get countAccepted => _all.where(_isAccepted).length;
   int get countInProgress => _all.where(_isInProgress).length;
-  int get countNotSelected => _all.where(_isNotSelected).length;
 
   void setFilter(ProposalFilter f) {
     filter = f;
@@ -121,13 +122,20 @@ class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
     final idRide = p['id_ride'] ?? p['idride'] ?? 0;
 
     Trip? trip = assignedRides[idRide];
+    var rideGone = false;
     if (trip == null && idRide != 0) {
       try {
         final r = await _api.getRideById(idRide);
         final rd = (r.data['ride'] ?? r.data) as Map<String, dynamic>;
         trip = Trip.fromJson(rd);
-      } catch (e) {
+      } on DioException catch (e) {
         debugPrint('[proposals] GET rides/$idRide falló: $e');
+        // La API respondió (4xx/5xx): el viaje ya no existe o no es
+        // consultable. Un fallo de red (sin respuesta) no lo marca.
+        rideGone = e.response != null;
+      } catch (e) {
+        debugPrint('[proposals] GET rides/$idRide no se pudo parsear: $e');
+        rideGone = true;
       }
     }
 
@@ -159,7 +167,9 @@ class AcceptedTripsProvider extends ChangeNotifier with ViewStateMixin {
       clientName: clientName,
       paymentMethod: trip?.paymentMethod,
       rideStatus: trip?.status ?? 0,
+      cancelReason: trip?.cancelReason,
       rideLoaded: trip != null,
+      rideGone: rideGone,
     );
   }
 }

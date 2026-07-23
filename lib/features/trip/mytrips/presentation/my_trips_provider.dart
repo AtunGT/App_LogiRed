@@ -40,7 +40,7 @@ class MyTripsProvider extends ChangeNotifier with ViewStateMixin {
   bool _isExpired(Trip t) =>
       t.status == RideStatus.pending &&
       t.driverId == null &&
-      TripSchedule.isPast(t.date, t.hour);
+      TripSchedule.isExpired(t.date, t.hour);
 
   Future<void> _cancelExpired(List<Trip> expired) async {
     await Future.wait(expired.map((t) async {

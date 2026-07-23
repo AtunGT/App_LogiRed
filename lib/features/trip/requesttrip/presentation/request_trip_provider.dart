@@ -26,6 +26,11 @@ class RequestTripProvider extends ChangeNotifier with ViewStateMixin {
   bool isLocating = false;
   bool success = false;
 
+  void resetSuccess() {
+    success = false;
+    notifyListeners();
+  }
+
   void onDateChange(String v) {
     date = v;
     notifyListeners();

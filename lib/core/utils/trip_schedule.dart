@@ -32,6 +32,17 @@ class TripSchedule {
     return at != null && DateTime.now().isAfter(at);
   }
 
+  /// Margen de gracia tras la hora programada antes de dar un viaje
+  /// por expirado (debe coincidir con el job de expiración de la API).
+  static const expirationGrace = Duration(minutes: 30);
+
+  /// Un viaje sin conductor se considera expirado cuando ya pasó su
+  /// hora programada más [expirationGrace].
+  static bool isExpired(String date, String hour) {
+    final at = scheduledAt(date, hour);
+    return at != null && DateTime.now().isAfter(at.add(expirationGrace));
+  }
+
   static const _months = [
     '',
     'ene',
