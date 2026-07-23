@@ -27,6 +27,15 @@ class _ClientPaymentScreenState extends State<ClientPaymentScreen> {
   bool _paying = false;
   String? _error;
 
+  @override
+  void initState() {
+    super.initState();
+    // Si el viaje se solicitó con transferencia, preselecciona esa opción.
+    if (PaymentMethodInfo.isTransfer(widget.trip.paymentMethod)) {
+      _selectedMethod = 1;
+    }
+  }
+
   String _fmt(double v) {
     final s = v.toStringAsFixed(0).replaceAllMapped(
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');

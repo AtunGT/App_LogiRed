@@ -605,18 +605,28 @@ class _PaymentMethodSelector extends StatelessWidget {
           child: _PaymentOption(
             label: 'Efectivo',
             icon: Icons.payments_outlined,
-            selected: selected != 2,
+            selected: selected == 1,
             onTap: () => onChanged(1),
             colorScheme: colorScheme,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
           child: _PaymentOption(
             label: 'Tarjeta',
             icon: Icons.credit_card_rounded,
             selected: selected == 2,
             onTap: () => onChanged(2),
+            colorScheme: colorScheme,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _PaymentOption(
+            label: 'Transferencia',
+            icon: Icons.account_balance_outlined,
+            selected: selected == 3,
+            onTap: () => onChanged(3),
             colorScheme: colorScheme,
           ),
         ),
@@ -666,11 +676,15 @@ class _PaymentOption extends StatelessWidget {
               size: 26,
             ),
             const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: selected ? colorScheme.primary : colorScheme.onSurface,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: selected ? colorScheme.primary : colorScheme.onSurface,
+                ),
               ),
             ),
           ],

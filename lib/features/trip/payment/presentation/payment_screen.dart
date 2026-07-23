@@ -30,7 +30,8 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  bool get _isCash => !PaymentMethodInfo.isCard(widget.paymentMethod);
+  bool get _isCash => PaymentMethodInfo.isCash(widget.paymentMethod);
+  bool get _isTransfer => PaymentMethodInfo.isTransfer(widget.paymentMethod);
 
   bool _paid = false;
   bool _confirming = false;
@@ -103,7 +104,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   child: Text(
                     _isCash
                         ? 'Pago en efectivo confirmado'
-                        : 'Pago con tarjeta completado',
+                        : _isTransfer
+                            ? 'Pago por transferencia completado'
+                            : 'Pago con tarjeta completado',
                     style: TextStyle(
                         color: colorScheme.primary,
                         fontWeight: FontWeight.bold),
@@ -180,7 +183,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(width: 10),
               Flexible(
                 child: Text(
-                  'Esperando el pago con tarjeta del cliente…',
+                  _isTransfer
+                      ? 'Esperando la transferencia del cliente…'
+                      : 'Esperando el pago con tarjeta del cliente…',
                   style: TextStyle(
                       color: colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w500),
@@ -265,7 +270,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ),
                   const SizedBox(height: 20),
                   _PaymentMethodCard(
-                    isCash: isCash,
+                    paymentMethod: widget.paymentMethod,
                     amount: proposalPrice,
                     colorScheme: colorScheme,
                   ),
@@ -343,12 +348,12 @@ class _CompletedBanner extends StatelessWidget {
 }
 
 class _PaymentMethodCard extends StatelessWidget {
-  final bool isCash;
+  final int paymentMethod;
   final double amount;
   final ColorScheme colorScheme;
 
   const _PaymentMethodCard({
-    required this.isCash,
+    required this.paymentMethod,
     required this.amount,
     required this.colorScheme,
   });
@@ -378,10 +383,9 @@ class _PaymentMethodCard extends StatelessWidget {
           Row(
             children: [
               _MethodPill(
-                  label: 'Efectivo', active: isCash, colorScheme: colorScheme),
-              const SizedBox(width: 8),
-              _MethodPill(
-                  label: 'Tarjeta', active: !isCash, colorScheme: colorScheme),
+                  label: PaymentMethodInfo.label(paymentMethod),
+                  active: true,
+                  colorScheme: colorScheme),
             ],
           ),
           const SizedBox(height: 14),

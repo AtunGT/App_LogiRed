@@ -287,9 +287,12 @@ class _TripInProgressScreenState extends State<TripInProgressScreen> {
       ));
       return;
     }
-    final isCard = PaymentMethodInfo.isCard(widget.trip.paymentMethod);
+    // Tarjeta y transferencia: el cliente paga por su cuenta (Stripe o SPEI).
+    // Efectivo: el cliente espera a que el conductor confirme el pago en mano.
+    final isElectronic =
+        PaymentMethodInfo.isElectronic(widget.trip.paymentMethod);
     Navigator.of(context).pushReplacement(MaterialPageRoute(
-      builder: (_) => isCard
+      builder: (_) => isElectronic
           ? ClientPaymentScreen(
               trip: widget.trip, proposal: proposal, duration: _duration)
           : CashPaymentWaitScreen(
